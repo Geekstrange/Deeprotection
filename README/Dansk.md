@@ -137,5 +137,4 @@ Tak for din støtte og deltagelse!
 
 ### Tak
 
-- [GitHub Emoji Cheat Sheet](https://www.webpagefx.com/tools/emoji─cheat─sheet)
 - [GitHub Pages](https://pages.github.com)

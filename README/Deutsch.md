@@ -138,5 +138,4 @@ Vielen Dank nochmals für Ihre Unterstützung und Ihr Engagement!
 
 ### Danksagung
 
-- [GitHub Emoji Cheat Sheet](https://www.webpagefx.com/tools/emoji─cheat─sheet)
 - [GitHub Pages](https://pages.github.com)
