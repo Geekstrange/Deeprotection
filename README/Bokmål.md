@@ -119,7 +119,7 @@ Les [CONTRIBUTING.md](https://github.com/Geekstrange/Deeprotection/CONTRIBUTING.
 
 ### Lisensavtale
 
-[![CC-BY-NC-SA Badge](https://mirrors.creativecommons.org/presskit/buttons/88x31/svg/by─nc─sa.svg)](https://creativecommons.org/licenses/by-nc-sa/4.0/)
+![CC-BY-NC-SA](https://mirrors.creativecommons.org/presskit/buttons/88x31/svg/by-nc-sa.svg)
 
 Dette prosjektet er lisensiert under [CC-BY-NC-SA](https://creativecommons.org/licenses/by-nc-sa/4.0/). Du kan fritt bruke, dele, endre og vise prosjektet for ikke-kommersielle formål under følgende vilkår:
 
