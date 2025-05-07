@@ -4,7 +4,7 @@ Deeprotection ist ein Sicherheitstool, das Linux-Befehle mit hohem Risiko und ve
 
 <p align="center">
   <a href="https://github.com/Geekstrange/Deeprotection">
-    <img src="images/logo.svg" alt="Logo" width="80" height="80">
+    <img src="https://github.com/Geekstrange/Deeprotection/blob/main/images/logo.svg" alt="Logo" width="80" height="80">
   </a>
   <h3 align="center">Deeprotection</h3>
   <h5 align="center">: ) Hallo, danke für die Nutzung!</h5>
