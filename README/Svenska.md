@@ -67,12 +67,12 @@ filetree
 `deeprotection.conf`
 
 ```
-disable=false		# Aktivera
-expire_hours=5		# Standardvaraktighet
-timestamp=			# Tidsstämpel
-update=enable		# Aktivera automatisk uppdatering
+disable=false         # Aktivera
+expire_hours=5        # Standardvaraktighet
+timestamp=            # Tidsstämpel
+update=enable         # Aktivera automatisk uppdatering
 ...
-...					# Blockeringsregler
+...                   # Blockeringsregler
 ...
 ```
 
@@ -85,9 +85,9 @@ update=enable		# Aktivera automatisk uppdatering
 #### 3. Skriptfunktioner
 
 ```
-launcher			# Starta
-loader				# Kontrollera uppdateringar och validera konfigurationsfil
-mariana─core		# Huvudskyddprogram
+launcher        # Starta
+loader          # Kontrollera uppdateringar och validera konfigurationsfil
+mariana─core    # Huvudskyddprogram
 ```
 
 ### Distribution
@@ -97,16 +97,16 @@ mariana─core		# Huvudskyddprogram
 ```
 /
 ├── etc
-│ 	└── deeprotection
-│ 		└── deeprotection.conf		# Konfigurationsfil och regler
+│   └── deeprotection
+│       └── deeprotection.conf    # Konfigurationsfil och regler
 ├── usr
-│ 	└── bin 
-│		├── launcher				# Startprogram
-│		├── loader					# Initieringsprogram
-│		└── mariana─core			# Skyddprogram
+│   └── bin 
+│   ├── launcher                  # Startprogram
+│   ├── loader                    # Initieringsprogram
+│   └── mariana─core              # Skyddprogram
 └── var
     └── log
-    	└── deeprotection.log
+        └── deeprotection.log
 ```
 
 ### Tekniska detaljer
@@ -119,7 +119,7 @@ Läs [CONTRIBUTING.md](https://github.com/Geekstrange/Deeprotection/CONTRIBUTING
 
 ### Licensavtal
 
-[![CC─BY─NC─SA Badge](https://mirrors.creativecommons.org/presskit/buttons/88x31/svg/by─nc─sa.svg)](https://creativecommons.org/licenses/by-nc-sa/4.0/)
+[![CC-BY-NC-SA Badge](https://mirrors.creativecommons.org/presskit/buttons/88x31/svg/by─nc─sa.svg)](https://creativecommons.org/licenses/by-nc-sa/4.0/)
 
 Detta projekt licensieras under [CC-BY-NC-SA](https://creativecommons.org/licenses/by-nc-sa/4.0/). Du kan fritt använda, dela, modifiera och visa projektet för icke-kommersiella ändamål under följande villkor:
 
