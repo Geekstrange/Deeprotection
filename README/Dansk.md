@@ -4,7 +4,7 @@ Deeprotection er et sikkerhedsværktøj, der kan blokere farlige Linux-kommandoe
 
 <p align="center">
   <a href="https://github.com/Geekstrange/Deeprotection">
-    <img src="images/logo.svg" alt="Logo" width="80" height="80">
+    <img src="https://github.com/Geekstrange/Deeprotection/blob/main/images/logo.svg" alt="Logo" width="80" height="80">
   </a>
   <h3 align="center">Deeprotection</h3>
   <h5 align="center">: ) Hej, tak fordi du bruger vores produkt!</h5>
