@@ -24,7 +24,7 @@ Deeprotection is a security tool designed to intercept Linux high-risk commands 
 
 #### 🌏Asia
 
-[*🇨🇳简体中文*](https://github.com/Geekstrange/Deeprotection/blob/main/README/简体中文.md)
+[🇨🇳简体中文](https://github.com/Geekstrange/Deeprotection/blob/main/README/简体中文.md)
 
 [🇨🇳繁體中文](https://github.com/Geekstrange/Deeprotection/blob/main/README/繁體中文.md)
 
