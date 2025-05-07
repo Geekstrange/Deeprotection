@@ -120,7 +120,7 @@ Veuillez vous référer à [CONTRIBUTING.md](https://github.com/Geekstrange/Deep
 
 ### Licence
 
-[![CC-BY-NC-SA Badge](https://mirrors.creativecommons.org/presskit/buttons/88x31/svg/by─nc─sa.svg)](https://creativecommons.org/licenses/by-nc-sa/4.0/)
+![CC-BY-NC-SA](https://mirrors.creativecommons.org/presskit/buttons/88x31/svg/by-nc-sa.svg)
 
 Ce projet est licencié sous [CC-BY-NC-SA](https://creativecommons.org/licenses/by-nc-sa/4.0/). Vous pouvez utiliser, partager, modifier et exposer ce projet librement à des fins non commerciales, sous réserve des conditions suivantes :
 
