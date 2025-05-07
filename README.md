@@ -150,7 +150,7 @@ Please refer to [CONTRIBUTING.md](https://github.com/Geekstrange/Deeprotection/C
 
 ### License
 
-![CC-BY-NC-SA Badge](https://mirrors.creativecommons.org/presskit/buttons/88x31/svg/by─nc─sa.svg)
+![CC-BY-NC-SA](https://mirrors.creativecommons.org/presskit/buttons/88x31/svg/by-nc-sa.svg)
 
 This project is licensed under [CC-BY-NC-SA](https://creativecommons.org/licenses/by-nc-sa/4.0/). You may freely use, share, modify, and display this project for non-commercial purposes, subject to the following terms:
 
