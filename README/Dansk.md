@@ -67,12 +67,12 @@ filetree
 `deeprotection.conf`
 
 ```
-disable=false		# Aktiver
-expire_hours=5		# Standardvarighed
-timestamp=			# Tidsstempel
-update=enable		# Aktiver automatisk opdatering
+disable=false         # Aktiver
+expire_hours=5        # Standardvarighed
+timestamp=            # Tidsstempel
+update=enable         # Aktiver automatisk opdatering
 ...
-...					# Blokering regler
+...                   # Blokering regler
 ...
 ```
 
@@ -85,9 +85,9 @@ update=enable		# Aktiver automatisk opdatering
 #### 3. Script funktioner
 
 ```
-launcher			# Start
-loader				# Kontroller opdateringer og valider konfigurationsfil
-mariana─core		# Hovedbeskyttelsesprogram
+launcher        # Start
+loader          # Kontroller opdateringer og valider konfigurationsfil
+mariana─core    # Hovedbeskyttelsesprogram
 ```
 
 ### Distribution
@@ -97,16 +97,16 @@ mariana─core		# Hovedbeskyttelsesprogram
 ```
 /
 ├── etc
-│ 	└── deeprotection
-│ 		└── deeprotection.conf		# Konfigurationsfil og regler
+│   └── deeprotection
+│       └── deeprotection.conf    # Konfigurationsfil og regler
 ├── usr
-│ 	└── bin 
-│		├── launcher				# Startprogram
-│		├── loader					# Opstartprogram
-│		└── mariana─core			# Beskyttelsesprogram
+│   └── bin 
+│   ├── launcher                  # Startprogram
+│   ├── loader                    # Opstartprogram
+│   └── mariana─core              # Beskyttelsesprogram
 └── var
     └── log
-    	└── deeprotection.log
+        └── deeprotection.log
 ```
 
 ### Tekniske detaljer
@@ -119,7 +119,7 @@ Læs [CONTRIBUTING.md](https://github.com/Geekstrange/Deeprotection/CONTRIBUTING
 
 ### Licensaftale
 
-[![CC─BY─NC─SA Badge](https://mirrors.creativecommons.org/presskit/buttons/88x31/svg/by─nc─sa.svg)](https://creativecommons.org/licenses/by-nc-sa/4.0/)
+[![CC-BY-NC-SA Badge](https://mirrors.creativecommons.org/presskit/buttons/88x31/svg/by─nc─sa.svg)](https://creativecommons.org/licenses/by-nc-sa/4.0/)
 
 Dette projekt er licensieret under [CC-BY-NC-SA](https://creativecommons.org/licenses/by-nc-sa/4.0/). Du kan frit bruge, dele, ændre og vise projektet til ikke-kommercielle formål under følgende vilkår:
 
