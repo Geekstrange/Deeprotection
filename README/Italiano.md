@@ -120,7 +120,7 @@ Per un elenco dei sviluppatori che hanno contribuito a questo progetto, fare rif
 
 ### Licenza
 
-[![CC─BY─NC─SA Badge](https://mirrors.creativecommons.org/presskit/buttons/88x31/svg/by─nc─sa.svg)](https://creativecommons.org/licenses/by-nc-sa/4.0/)
+[![CC-BY-NC-SA Badge](https://mirrors.creativecommons.org/presskit/buttons/88x31/svg/by─nc─sa.svg)](https://creativecommons.org/licenses/by-nc-sa/4.0/)
 
 Questo progetto è pubblicato sotto la licenza [CC-BY-NC-SA](https://creativecommons.org/licenses/by-nc-sa/4.0/). È possibile utilizzare, condividere, modificare e presentare questo progetto liberamente a scopo non commerciale, rispettando le seguenti condizioni:
 
