@@ -120,7 +120,7 @@ Eine Liste der an diesem Projekt beteiligten Entwickler finden Sie in der [CONTR
 
 ### Lizenz
 
-[![CC-BY-NC-SA Abzeichen](https://mirrors.creativecommons.org/presskit/buttons/88x31/svg/by─nc─sa.svg)](https://creativecommons.org/licenses/by-nc-sa/4.0/)
+![CC-BY-NC-SA](https://mirrors.creativecommons.org/presskit/buttons/88x31/svg/by-nc-sa.svg)
 
 Dieses Projekt steht unter der [CC-BY-NC-SA-Lizenz](https://creativecommons.org/licenses/by-nc-sa/4.0/). Sie dürfen dieses Projekt unter nicht kommerziellen Zwecken frei nutzen, teilen, bearbeiten und präsentieren, müssen sich dabei jedoch an folgende Bedingungen halten:
 
