@@ -3,7 +3,7 @@
 REPO_OWNER="Geekstrange"
 REPO_NAME="Deeprotection"
 DEB_PACKAGE_NAME="deeprotection"
-DOWNLOAD_DIR="/root/develop/multilingual"
+DOWNLOAD_DIR="./"
 MAX_RETRY=3    # max retries 最大重试次数
 RETRY_DELAY=5  # Retry download time 重试下载时间
 
