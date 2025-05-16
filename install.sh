@@ -1,9 +1,24 @@
 #!/bin/bash
 
+# If you want to turn it into a generic script
+# please uncomment lines 9-16 and annotate lines 18-20
+# 如果你想把他变成通用脚本,请取消注释9-16行,并注释18-20行
+
+# Check if necessary parameters are provided
+# 检查是否提供必要参数
+#if [ "$#" -lt 3 ]; then
+#    echo "Usage: $0 <REPO_OWNER> <REPO_NAME> <DEB_PACKAGE_NAME> [DOWNLOAD_DIR]"
+#    exit 1
+#fi
+
+#REPO_OWNER="$1"
+#REPO_NAME="$2"
+#DEB_PACKAGE_NAME="$3"
+
 REPO_OWNER="Geekstrange"
 REPO_NAME="Deeprotection"
 DEB_PACKAGE_NAME="deeprotection"
-DOWNLOAD_DIR="./"
+DOWNLOAD_DIR="${4:-.}"  # Default download to current directory 默认下载到当前目录
 MAX_RETRY=3    # max retries 最大重试次数
 RETRY_DELAY=5  # Retry download time 重试下载时间
 
