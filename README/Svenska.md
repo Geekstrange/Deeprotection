@@ -53,10 +53,7 @@ filetree
 │   └── 繁體中文.md
 ├── ARCHITECTURE.md
 ├── CONTRIBUTING.md
-├── README.md
-├── deeprotection.conf
-├── launcher
-└── mariana─core
+└── README.md
 ```
 
 ### Användarhandledning
