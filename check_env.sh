@@ -2,7 +2,7 @@
 
 # Define the command array that needs to be checked
 # 定义需要检查的命令数组
-commands=("curl" "jq" "bc" "awk" "dpkg" "unzip")
+commands=("curl" "jq" "bc" "mawk" "dpkg")
 
 # Store missing commands
 # 存储缺失的命令
