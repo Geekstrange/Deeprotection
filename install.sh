@@ -28,10 +28,10 @@ LATEST_RELEASE=$(curl -s "https://api.github.com/repos/$REPO_OWNER/$REPO_NAME/re
 
 # Find and download the. zip file
 # 查找并下载.zip文件
-DEB_ASSET=$(echo "$LATEST_RELEASE" | jq -r '.assets[] | select(.name | endswith(".zip")) | .browser_download_url')
+DEB_ASSET=$(echo "$LATEST_RELEASE" | jq -r '.assets[] | select(.name | endswith(".deb")) | .browser_download_url')
 # Define the command array that needs to be checked
 # 定义需要检查的命令数组
-commands=("curl" "jq" "bc" "awk" "dpkg" "unzip")
+commands=("curl" "jq" "bc" "awk" "dpkg")
 
 # Store missing commands
 # 存储缺失的命令
@@ -57,10 +57,9 @@ get_release() {
 					echo "Error: Downloaded but file not found"
 					exit 1
 				else
-					unzip -qo $DOWNLOAD_DIR/$DEB_ASSET -d $DOWNLOAD_DIR
 					# Attempt to install using sudo. If you do not have permission or sudo does not exist, install directly
 					# 尝试使用sudo安装,如果没有权限或sudo不存在则直接安装
-					if sudo dpkg -i $DOWNLOAD_DIR/*.deb 2>/dev/null && rm -f $DOWNLOAD_DIR/$DEB_ASSET $DOWNLOAD_DIR/*.deb || dpkg -i $DOWNLOAD_DIR/*.deb && rm -f $DOWNL OAD_DIR/$DEB_ASSET $DOWNLOAD_DIR/*.deb; then
+					if sudo dpkg -i $DOWNLOAD_DIR/*.deb 2>/dev/null && rm -f $DOWNLOAD_DIR/$DEB_ASSET || dpkg -i $DOWNLOAD_DIR/*.deb && rm -f $DOWNLOAD_DIR/$DEB_ASSET; then
 						printf "\033[32mInstallation completed successfully\033[0m\n"
 					fi
 				fi
