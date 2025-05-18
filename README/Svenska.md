@@ -1,4 +1,4 @@
-# Deeprotection - Svenska Version
+# Deeprotection - Svenska Version  v1.0.0
 
 Deeprotection är ett säkerhet-verktyg som i realtid blockrar högriskkommandon och misstänkta skript i Linux. Det skyddar systemet genom att blockera oautorisade åtgärder, logga riskfyllda beteenden och ge varningar om potentiella säkerhets risker.
 
@@ -56,7 +56,6 @@ filetree
 ├── README.md
 ├── deeprotection.conf
 ├── launcher
-├── loader
 └── mariana─core
 ```
 
@@ -102,7 +101,6 @@ mariana─core    # Huvudskyddprogram
 ├── usr
 │   └── bin 
 │   ├── launcher                  # Startprogram
-│   ├── loader                    # Initieringsprogram
 │   └── mariana─core              # Skyddprogram
 └── var
     └── log
