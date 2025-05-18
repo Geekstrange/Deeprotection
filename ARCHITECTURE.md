@@ -1,8 +1,8 @@
-[English](# mariana-core Architecture Technical Document)
+[English](# dp Architecture Technical Document)
 
-[简体中文](# mariana-core 架构技术文档)
+[简体中文](# dp 架构技术文档)
 
-# mariana-core Architecture Technical Document
+# dp Architecture Technical Document
 
 ## Overall Architecture Diagram
 ```mermaid
@@ -169,7 +169,7 @@ command_pipeline_module() {
 }
 ```
 ---
-# mariana-core 架构技术文档
+# dp 架构技术文档
 
 ## 整体架构图
 ```mermaid
