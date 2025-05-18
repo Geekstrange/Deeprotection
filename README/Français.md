@@ -1,4 +1,4 @@
-# Deeprotection - Version Française
+# Deeprotection - Version Française v1.0.0
 
 Deeprotection est un outil de sécurité conçu pour intercepter les commandes Linux à risque élevé et les scripts suspects en temps réel. Il protège votre système en bloquant les opérations non autorisées, en enregistrant les comportements à risque et en fournissant des alertes sur les vulnérabilités de sécurité potentielles.
 
@@ -103,7 +103,6 @@ mariana─core        # Programme de protection principal
 ├── usr
 │   └── bin 
 │       ├── launcher                  # Programme de démarrage
-│       ├── loader                    # Programme de démarrage
 │       └── mariana─core              # Programme de protection
 └── var
     └── log
