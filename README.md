@@ -25,29 +25,29 @@ Deeprotection is a security tool developed in Bash. It filters user commands thr
 
 ### 🌏Asia
 
-[🇨🇳简体中文](https://github.com/Geekstrange/Deeprotection/blob/main/README/简体中文.md)
+[🇨🇳简体中文](https://github.com/Geekstrange/Deeprotection/blob/main/README/简体中文.md) 更新至v1.5.0
 
-[🇨🇳繁體中文](https://github.com/Geekstrange/Deeprotection/blob/main/README/繁體中文.md)
+[🇨🇳繁體中文](https://github.com/Geekstrange/Deeprotection/blob/main/README/繁體中文.md) v1.0.0
 
-[🇯🇵日本語](https://github.com/Geekstrange/Deeprotection/blob/main/README/日本語.md)
+[🇯🇵日本語](https://github.com/Geekstrange/Deeprotection/blob/main/README/日本語.md) v1.0.0
 
-[🇰🇷한국어](https://github.com/Geekstrange/Deeprotection/blob/main/README/한국어.md)
+[🇰🇷한국어](https://github.com/Geekstrange/Deeprotection/blob/main/README/한국어.md) v1.0.0
 
 ### 🌍Europe
 
-[🇫🇷Français](https://github.com/Geekstrange/Deeprotection/blob/main/README/Français.md)
+[🇫🇷Français](https://github.com/Geekstrange/Deeprotection/blob/main/README/Français.md) v1.0.0
 
-[🇩🇪Deutsch](https://github.com/Geekstrange/Deeprotection/blob/main/README/Deutsch.sh)
+[🇩🇪Deutsch](https://github.com/Geekstrange/Deeprotection/blob/main/README/Deutsch.sh) v1.0.0
 
-[🇮🇹Italiano](https://github.com/Geekstrange/Deeprotection/blob/main/README/Italiano.md)
+[🇮🇹Italiano](https://github.com/Geekstrange/Deeprotection/blob/main/README/Italiano.md) v1.0.0
 
-[🇷🇺Русский](https://github.com/Geekstrange/Deeprotection/blob/main/README/Русский.md)
+[🇷🇺Русский](https://github.com/Geekstrange/Deeprotection/blob/main/README/Русский.md) v1.0.0
 
-[🇸🇪Svenska](https://github.com/Geekstrange/Deeprotection/blob/main/README/Svenska.md)
+[🇸🇪Svenska](https://github.com/Geekstrange/Deeprotection/blob/main/README/Svenska.md) v1.0.0
 
-[🇳🇴Bokmål](https://github.com/Geekstrange/Deeprotection/blob/main/README/Bokmål.md)
+[🇳🇴Bokmål](https://github.com/Geekstrange/Deeprotection/blob/main/README/Bokmål.md) v1.0.0
 
-[🇩🇰Dansk](https://github.com/Geekstrange/Deeprotection/blob/main/README/Dansk.md)
+[🇩🇰Dansk](https://github.com/Geekstrange/Deeprotection/blob/main/README/Dansk.md) v1.0.0
 
 ---
 
