@@ -102,7 +102,6 @@ mariana─core    # Hovedbeskyttelsesprogram
 ├── usr
 │   └── bin 
 │   ├── launcher                  # Startprogram
-│   ├── loader                    # Opstartprogram
 │   └── mariana─core              # Beskyttelsesprogram
 └── var
     └── log
