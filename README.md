@@ -25,7 +25,7 @@ Deeprotection is a security tool developed in Bash. It filters user commands thr
 
 ### 🌏Asia
 
-[🇨🇳简体中文](https://github.com/Geekstrange/Deeprotection/blob/main/README/简体中文.md) 更新至v1.5.0
+[🇨🇳简体中文](https://github.com/Geekstrange/Deeprotection/blob/main/README/简体中文.md) 更新至v1.5.1
 
 [🇨🇳繁體中文](https://github.com/Geekstrange/Deeprotection/blob/main/README/繁體中文.md) v1.0.0
 
@@ -120,6 +120,43 @@ For Linux beginners, you may need to first understand the classification of subs
 
 >- **sub-shell**：Created via `fork`, it can inherit variables, functions, aliases, etc., from the parent `shell`, but modifications to these data will not affect the parent `shell`. Generation methods for `sub-shell` include process replacement, command replacement, `(LIST)`, `|`, or `&`.
 >- **child-shell**：Created via `fork-exec` mode, it can only inherit environment variables exported by the parent `shell` through `export`.
+
+**Enhanced `cd` Command**
+
+In dpshell, entering `cd` changes the directory and echoes the current working path.
+
+```bash
+(Enter exit or Ctrl+D to quit)
+dpshell# cd DEBUG_BAK/
+/root/DEBUG_BAK
+dpshell#
+```
+
+In dpshell, entering `cd ?` allows you to input a number to enter the corresponding directory.
+
+```bash
+(Enter exit or Ctrl+D to quit)
+dpshell# cd ?
+1) DEBIAN/
+2) etc/
+3) usr/
+4) var/
+Select a directory (Enter q to quit):
+```
+
+In dpshell, entering `cd ??` enables you to consecutively select directories and hidden directories.
+
+```bash
+(Enter exit or Ctrl+D to quit)
+dpshell# cd ??
+1) DEBIAN
+2) etc
+3) usr
+4) var
+l] Go back to the parent directory
+q] Exit recursive mode
+Current directory: /root/develop/deeprotection >
+```
 
 **Permissive Mode**
 
