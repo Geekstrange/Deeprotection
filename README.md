@@ -13,7 +13,7 @@ Deeprotection is a security tool developed in Bash. It filters user commands thr
     <a href="https://github.com/Geekstrange/Deeprotection"><strong>📖Explore the project documentation »</strong></a>
     <br />
     <br />
-    <a href="https://github.com/Geekstrange/Deeprotection">🎬View Demo</a>
+    <a href="https://github.com/Geekstrange/Deeprotection/blob/main/images/demo_en_US.mp4">🎬View Demo</a>
     ·
     <a href="https://github.com/Geekstrange/Deeprotection/issues">🧪Report Bug</a>
     ·
