@@ -1,6 +1,6 @@
-[English](# dp Architecture Technical Document)
+[English](#dpArchitectureTechnicalDocument)
 
-[简体中文](# dp 架构技术文档)
+[简体中文](#dp架构技术文档)
 
 # dp Architecture Technical Document
 
