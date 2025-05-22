@@ -129,16 +129,16 @@ In dpshell, entering `cd` changes the directory and echoes the current working p
 
 ```bash
 (Enter exit or Ctrl+D to quit)
-dpshell# cd DEBUG_BAK/
+dpshell(1)# cd DEBUG_BAK/
 /root/DEBUG_BAK
-dpshell#
+dpshell(1)#
 ```
 
 In dpshell, entering `cd ?` allows you to input a number to enter the corresponding directory.
 
 ```bash
 (Enter exit or Ctrl+D to quit)
-dpshell# cd ?
+dpshell(1)# cd ?
 1) DEBIAN/
 2) etc/
 3) usr/
@@ -150,7 +150,7 @@ In dpshell, entering `cd ??` enables you to consecutively select directories and
 
 ```bash
 (Enter exit or Ctrl+D to quit)
-dpshell# cd ??
+dpshell(1)# cd ??
 1) DEBIAN
 2) etc
 3) usr
@@ -177,7 +177,7 @@ Usage 2: Directly run the dp command
 root@hyperv:~/develop/# dp
 dpshell>
 (Enter exit or press Ctrl+D to exit)
-dpshell# echo Hello!
+dpshell(1)# echo Hello!
 Hello!
 ```
 
@@ -198,7 +198,7 @@ Running effect (demonstrated in child shell mode)
 root@hyperv:~/develop# dp
 dpshell>
 (Enter exit or press Ctrl+D to exit)
-dpshell# echo
+dpshell(1)# echo
 [!] Intercepted echo
 ```
 
@@ -217,7 +217,7 @@ Running effect (demonstrated in child shell mode)
 root@hyperv:~/develop# dp
 dpshell>
 (Enter exit or press Ctrl+D to exit)
-dpshell# echo 111
+dpshell(1)# echo 111
 [!] Original command: echo 111 -> Replaced with: echo 222
 222
 ```
@@ -234,7 +234,7 @@ Running effect (demonstrated in child shell mode)
 root@hyperv:~/develop# dp
 dpshell>
 (Enter exit or press Ctrl+D to exit)
-dpshell# rm -rf *
+dpshell(1)# rm -rf *
 [!] Intercepted: Detected 'rm \*' operation, blocked
 
 2. Allow rm *.txt commands
@@ -242,10 +242,10 @@ dpshell# rm -rf *
 root@hyperv:~/developl# dp
 dpshell>
 (Enter exit or press Ctrl+D to exit)
-dpshell# ls
+dpshell(1)# ls
 1.txt  2.txt  3.txt  test
-dpshell# rm -f *.txt
-dpshell# ls
+dpshell(1)# rm -f *.txt
+dpshell(1)# ls
 test
 ```
 
@@ -276,7 +276,7 @@ Running effect (demonstrated in shell mode)
 root@hyperv:~/develop# dp
 dpshell>
 (Enter exit or press Ctrl+D to exit)
-dpshell# echo
+dpshell(1)# echo
 [!] Warning: Operations on protected path /root/develop are prohibited
 ```
 
@@ -290,7 +290,7 @@ Running effect (demonstrated in shell mode)
 root@hyperv:~/develop# dp
 dpshell>
 (Enter exit or press Ctrl+D to exit)
-dpshell# rm -rf 111
+dpshell(1)# rm -rf 111
 [!] About to execute: /bin/rm -i -v -r 111
 /bin/rm: remove regular empty file '111'? y
 removed '111'
