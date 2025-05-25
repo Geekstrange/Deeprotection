@@ -305,7 +305,6 @@ You can customize Deeprotection's behavior through the `/etc/deeprotection/deepr
 ```
 # This is the Deeprotection configuration file.
 # Here is an explanation for each configuration item.
-# Please do not change the line numbers.
 
 # Language settings: Automatically obtained on first run.
 # To manually set the language, use standard language codes.
