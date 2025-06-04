@@ -63,7 +63,6 @@ Deeprotection is a security tool developed in Bash. It filters user commands thr
 - [🔬Technical Details](#🔬technical-details)
 - [📃Contributors List](#📃contributors-list)
 - [⚖License](#⚖license)
-- [📑Contributor Covenant](#📑contributor-covenant)
 - [⭐Acknowledgements](#⭐acknowledgements)
 
 ## ⚡Quick Start
@@ -421,33 +420,6 @@ The full text of the CC-BY-NC-SA License can be found in the project's [LICENSE]
 We sincerely appreciate your support and contributions and look forward to your participation in advancing the project. At the same time, please ensure compliance with the license to safeguard the project's sustainable development and protect the rights of the original authors.
 
 Thank you again for your support and involvement!
-
-## 📑Contributor Covenant
-
-![DCO](https://img.shields.io/badge/Developer%20Certificate%20of%20Origin-v1.1-blue.svg)
-
-This project adopts the DCO v1.1, which ensures that contributors clearly indicate their authority to submit relevant code and agree to comply with the project's license. Below is the complete content of the DCO:
-
-By submitting code, documentation, or other contributions to this project, you declare and agree to the following:
-
-1. **Authorization**：You have the right to submit relevant code, documentation, or other contributions to this project and will not violate any laws, regulations, or agreements with third parties.
-2. **Compliance with License**：Your contributions to this project will comply with the project's license, namely the [CC-BY-NC-SA](https://creativecommons.org/licenses/by-nc-sa/4.0/) License.
-3. **Attribution and Declaration**：You retain the right to be attributed for your contributions and declare that you legally own the intellectual property rights to the submitted code, documentation, or other content, or have obtained legal authorization.
-4. **Limitation of Liability**：You understand and agree that your contributions to this project are provided on an "as-is" basis, without any form of warranty or liability.
-
-When submitting contributions, you need to add the following statement in the code comments or contribution documents for each submission:
-
-```
-Signed-off-by: Name <Email Address>
-```
-
-This statement indicates that you have read and agreed to the above DCO content.
-
-If you make contributions to this project, it means you agree to comply with the DCO.
-
-The complete DCO text can be found on the [Developer Certificate of Origin](https://developercertificate.org/) website. If you have any questions about the DCO, please feel free to contact the project maintainer.
-
-We sincerely appreciate your contributions to this project. By adhering to the DCO, you can help us ensure the project's legality and sustainability, contributing to its healthy development.
 
 ## ⭐Acknowledgements
 
