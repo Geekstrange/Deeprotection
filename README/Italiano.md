@@ -1,4 +1,4 @@
-# Deeprotection - Versione Italiana v1.0.0
+# Deeprotection - Versione Italiana v0.0.1
 
 Deeprotection è uno strumento di sicurezza progettato per intercettare comandi Linux ad alto rischio e script sospetti in tempo reale. Protegge il tuo sistema bloccando operazioni non autorizzate, registrando comportamenti a rischio e fornendo allertesui potenziali vulnerabilità di sicurezza.
 
