@@ -1,4 +1,4 @@
-# Deeprotection - Bokmål Versjon v1.0.0
+# Deeprotection - Bokmål Versjon v0.0.1
 
 Deeprotection er et verktøy for sikkerhet som kan blokkere Linux-kommandoer og mistenkelige skript i sanntid. Det beskytter systemet ved å blokkere uautoriserte handlinger, logge risikovolle handlinger og varsle om potensielle sikkerhetshull.
 
