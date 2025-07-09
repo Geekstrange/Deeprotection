@@ -1,4 +1,4 @@
-# Deeprotection - Dansk Udgave v1.0.0
+# Deeprotection - Dansk Udgave v0.0.1
 
 Deeprotection er et sikkerhedsværktøj, der kan blokere farlige Linux-kommandoer og mistænkelige script i realtid. Det beskytter systemet ved at blokere ikke-autoriserede operationer, logge risikabelt adfærd og give advarsler om potentielle sikkerhedsårhuller.
 
