@@ -427,12 +427,4 @@ Thank you again for your support and involvement!
 
 **Listed in alphabetical order, no ranking implied**
 
-[mawk](https://github.com/ThomasDickey/mawk-snapshots) enhances our file reading functionality.
-
-[bc](https://github.com/gavinhoward/bc) provides us with floating-point arithmetic capabilities.
-
-[curl](https://curl.se) offers us update download functionality.
-
-[jq](https://github.com/jqlang/jq) improves our update detection mechanism.
-
-[ShellCheck](https://www.shellcheck.net/) provides us with a shell script analysis tool that helps enhance the project's code quality.
+[ShellCheck](https://www.shellcheck.net/) provides us with a shell script analysis tool that helps enhance the preview's code quality.
