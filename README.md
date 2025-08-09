@@ -114,7 +114,7 @@ MULTILINGUAL_msg                      # Status Warning Category
 Each time you open a new session, it will ask whether to load the protection function. You can turn it off in the configuration file, but you can still directly call the protection kernel by entering the `dp` command in the terminal.
 
 > [!WARNING]
-> **Dpshell is just an auxiliary tool and cannot be used as your default shell.**
+> **DPSHELL IS JUST AN AUXILIARY TOOL AND CANNOT BE USED AS YOUR DEFAULT SHELL.**
 
 All commands executed in dpshell will not be recorded.
 
@@ -267,7 +267,7 @@ Configuration file example
 ```
 
 > [!CAUTION]
-> **Because it provides recursive protection, do not add `/` as a rule.**
+> **BECAUSE IT PROVIDES RECURSIVE PROTECTION, DO NOT ADD `/` AS A RULE.**
 
 Running effect (demonstrated in shell mode)
 
@@ -429,13 +429,5 @@ Thank you again for your support and involvement!
 **Below are the indispensable dependencies of this project**
 
 **Listed in alphabetical order, no ranking implied**
-
-[mawk](https://github.com/ThomasDickey/mawk-snapshots) enhances our file reading functionality.
-
-[bc](https://github.com/gavinhoward/bc) provides us with floating-point arithmetic capabilities.
-
-[curl](https://curl.se) offers us update download functionality.
-
-[jq](https://github.com/jqlang/jq) improves our update detection mechanism.
 
 [ShellCheck](https://www.shellcheck.net/) provides us with a shell script analysis tool that helps enhance the project's code quality.
