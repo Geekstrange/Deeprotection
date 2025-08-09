@@ -113,7 +113,8 @@ MULTILINGUAL_msg                      # Status Warning Category
 
 Each time you open a new session, it will ask whether to load the protection function. You can turn it off in the configuration file, but you can still directly call the protection kernel by entering the `dp` command in the terminal.
 
-> [!WARNING] ⚠️ Dpshell is just an auxiliary tool and cannot be used as your default shell.
+> [!WARNING]
+> Dpshell is just an auxiliary tool and cannot be used as your default shell.
 
 All commands executed in dpshell will not be recorded.
 
@@ -172,7 +173,7 @@ Hello!
 
 Usage 2: Directly run the dp command
 
-```bash	
+```bash
 root@hyperv:~/develop/# dp
 dpshell>
 (Enter exit or press Ctrl+D to exit)
@@ -265,7 +266,8 @@ Configuration file example
  38 /root/develop
 ```
 
-> [!CAUTION] ⚠️ Because it provides recursive protection, do not add `/` as a rule.
+> [!CAUTION]
+> Because it provides recursive protection, do not add `/` as a rule.
 
 Running effect (demonstrated in shell mode)
 
@@ -297,7 +299,8 @@ removed '111'
 
 ### 🛠Configuration File Introduction
 
-> [!TIP] Only the English version is actually installed
+> [!TIP]
+> Only the English version is actually installed
 
 You can customize Deeprotection's behavior through the `/etc/deeprotection/deeprotection.conf` file, such as adding custom high-risk commands and path protection rules.
 
