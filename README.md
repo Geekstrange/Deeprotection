@@ -102,13 +102,13 @@ The first launch via the dplauncher module automatically obtains the current sys
 *Naming Rules*
 
 ```
-MULTILINGUAL_name                     # Language Name
-MULTILINGUAL_greet                    # Greeting
-MULTILINGUAL_war                      # Interception Warning Category
-MULTILINGUAL_err                      # Error Warning Category
-MULTILINGUAL_log                      # Log Recording Category
-MULTILINGUAL_ask                      # Message Inquiry Category
-MULTILINGUAL_msg                      # Status Warning Category
+name_                     # Language Name
+greet_                    # Greeting
+war_                      # Interception Warning Category
+err_                      # Error Warning Category
+log_                      # Log Recording Category
+ask_                      # Message Inquiry Category
+msg_                      # Status Warning Category
 ```
 
 Each time you open a new session, it will ask whether to load the protection function. You can turn it off in the configuration file, but you can still directly call the protection kernel by entering the `dp` command in the terminal.
