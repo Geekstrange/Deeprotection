@@ -411,13 +411,13 @@ Thank you to all developers who have contributed to this project. You can view a
 <div style="display: inline-flex; align-items: center; gap: 0px; vertical-align: middle;">
   <!-- MPL哥斯拉头SVG(带跳转) -->
   <a href="https://www.mozilla.org/en-US/MPL/2.0/" target="_blank">
-    <img src="E:\Ace\Desktop\MPL.svg"
-         alt="MPL 2.0"
+    <img src="https://github.com/Geekstrange/Deeprotection/blob/main/images/MPL.svg"
+         alt="Godzilla"
          style="width: 120px; height: auto; display: block;"/>
   </a>
   <!-- 喷火GIF(装饰用，无跳转), 调整left值贴合嘴部 -->
-  <img src="E:\Ace\Desktop\Spitfire.gif"
-       alt="Fire breath"
+  <img src="https://github.com/Geekstrange/Deeprotection/blob/main/images/Spitfire.gif"
+       alt="Spitfire"
        style="width: 100px; height: auto; margin-left: -25px; margin-top: 10px; z-index: -1;"/>
 </div>
 
