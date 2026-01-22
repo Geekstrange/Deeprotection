@@ -408,24 +408,16 @@ Thank you to all developers who have contributed to this project. You can view a
 
 ## ⚖License
 
-![MPL 2.0](https://github.com/Geekstrange/Deeprotection/blob/main/images/MPL.svg)
+<a href="https://www.mozilla.org/en-US/MPL/2.0/" target="_blank">  <img src="https://github.com/Geekstrange/Deeprotection/blob/main/images/MPL.svg" alt="MPL 2.0" style="width: 120px; height: auto;"/> </a>
 
+<br>
 This project is licensed under the Mozilla Public License Version 2.0 (MPL 2.0). You may freely use, copy, distribute, and modify this project, as well as create derivative works based on it, provided you comply with the following core terms:
 
-1. Attribution: You must retain the original author's attribution information in all copies or derivative works of this project, without altering or removing such content.
+1. **Attribution**: You must retain the original author's attribution information in all copies or derivative works of this project, without altering or removing such content.
 
-2. Usage Rights: Both commercial and non-commercial use of this project is permitted. You may derive economic benefits from this project through commercial activities, provided such activities comply with this license and relevant laws.
+2. **Usage Rights**: Both commercial and non-commercial use of this project is permitted. You may derive economic benefits from this project through commercial activities, provided such activities comply with this license and relevant laws.
 
-3. Derivative Works: If you modify this project or create derivative works based on it, the modified source code files (i.e., "Modified Files") must also be licensed under MPL 2.0 and made publicly available. When combining this project's source code with code under other licenses, only this project's source code and its modifications are subject to MPL 2.0, while other parts shall follow their respective licenses.
-
-Please note that the MPL 2.0 License does not exempt you from other legal obligations or liabilities arising from the use of this project. You shall assume all risks and consequences incurred by using this project. The original authors and contributors make no express or implied warranties regarding this project (including but not limited to warranties of merchantability, fitness for a particular purpose, and non-infringement), and shall not be liable for any direct or indirect damages resulting from the use of this project.
-
-The full text of the MPL 2.0 License can be found in the project's LICENSE file. For authoritative interpretation, you may also refer to the official version on the Mozilla website. If you have any questions about the license or require further clarification, please feel free to contact me.
-
-We sincerely appreciate your support and contributions and look forward to your participation in advancing the project. At the same time, please ensure compliance with the MPL 2.0 License to safeguard the project's sustainable open-source ecosystem and protect the legitimate rights and interests of the original authors and all contributors.
-
-Thank you again for your support and involvement!
-
+3. **Derivative Works**: If you modify this project or create derivative works based on it, the modified source code files (i.e., "Modified Files") must also be licensed under MPL 2.0 and made publicly available. When combining this project's source code with code under other licenses, only this project's source code and its modifications are subject to MPL 2.0, while other parts shall follow their respective licenses. Please note that the MPL 2.0 License does not exempt you from other legal obligations or liabilities arising from the use of this project. You shall assume all risks and consequences incurred by using this project. The original authors and contributors make no express or implied warranties regarding this project (including but not limited to warranties of merchantability, fitness for a particular purpose, and non-infringement), and shall not be liable for any direct or indirect damages resulting from the use of this project. The full text of the MPL 2.0 License can be found in the project's LICENSE file. For authoritative interpretation, you may also refer to the [official version on the Mozilla website](https://www.mozilla.org/en-US/MPL/2.0/). If you have any questions about the license or require further clarification, please feel free to contact me. We sincerely appreciate your support and contributions and look forward to your participation in advancing the project. At the same time, please ensure compliance with the MPL 2.0 License to safeguard the project's sustainable open-source ecosystem and protect the legitimate rights and interests of the original authors and all contributors. Thank you again for your support and involvement!
 
 ## ⭐Acknowledgements
 
