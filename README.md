@@ -102,13 +102,13 @@ The first launch via the dplauncher module automatically obtains the current sys
 *Naming Rules*
 
 ```
-MULTILINGUAL_name                     # Language Name
-MULTILINGUAL_greet                    # Greeting
-MULTILINGUAL_war                      # Interception Warning Category
-MULTILINGUAL_err                      # Error Warning Category
-MULTILINGUAL_log                      # Log Recording Category
-MULTILINGUAL_ask                      # Message Inquiry Category
-MULTILINGUAL_msg                      # Status Warning Category
+name_                     # Language Name
+greet_                    # Greeting
+war_                      # Interception Warning Category
+err_                      # Error Warning Category
+log_                      # Log Recording Category
+ask_                      # Message Inquiry Category
+msg_                      # Status Warning Category
 ```
 
 Each time you open a new session, it will ask whether to load the protection function. You can turn it off in the configuration file, but you can still directly call the protection kernel by entering the `dp` command in the terminal.
@@ -408,21 +408,24 @@ Thank you to all developers who have contributed to this project. You can view a
 
 ## ⚖License
 
-![CC-BY-NC-SA](https://mirrors.creativecommons.org/presskit/buttons/88x31/svg/by-nc-sa.svg)
+![MPL 2.0](https://www.mozilla.org/media/img/legal/mpl2/logo-sm.8af6687ce29b.png)
 
-This project is licensed under the [CC-BY-NC-SA License](https://creativecommons.org/licenses/by-nc-sa/4.0/). You may freely use, share, modify, and display this project for non-commercial purposes, provided you comply with the following terms:
+This project is licensed under the Mozilla Public License Version 2.0 (MPL 2.0). You may freely use, copy, distribute, and modify this project, as well as create derivative works based on it, provided you comply with the following core terms:
 
-1. **Attribution**：You must retain the original author's attribution information.
-2. **Non-Commercial Use**：You may not use this project for any commercial purposes or derive economic benefits from it.
-3. **Derivative Works**：If you modify this project or create derivative works based on it, the new works must also adopt the CC-BY-NC-SA License.
+1. Attribution: You must retain the original author's attribution information in all copies or derivative works of this project, without altering or removing such content.
 
-Please note that the CC-BY-NC-SA License does not exempt you from other legal obligations or liabilities that may arise from using this project. You assume all risks and consequences arising from the use of this project.
+2. Usage Rights: Both commercial and non-commercial use of this project is permitted. You may derive economic benefits from this project through commercial activities, provided such activities comply with this license and relevant laws.
 
-The full text of the CC-BY-NC-SA License can be found in the project's [LICENSE](https://github.com/Geekstrange/Deeprotection/LICENSE) file. If you have any questions about the license or require further clarification, please feel free to contact me.
+3. Derivative Works: If you modify this project or create derivative works based on it, the modified source code files (i.e., "Modified Files") must also be licensed under MPL 2.0 and made publicly available. When combining this project's source code with code under other licenses, only this project's source code and its modifications are subject to MPL 2.0, while other parts shall follow their respective licenses.
 
-We sincerely appreciate your support and contributions and look forward to your participation in advancing the project. At the same time, please ensure compliance with the license to safeguard the project's sustainable development and protect the rights of the original authors.
+Please note that the MPL 2.0 License does not exempt you from other legal obligations or liabilities arising from the use of this project. You shall assume all risks and consequences incurred by using this project. The original authors and contributors make no express or implied warranties regarding this project (including but not limited to warranties of merchantability, fitness for a particular purpose, and non-infringement), and shall not be liable for any direct or indirect damages resulting from the use of this project.
+
+The full text of the MPL 2.0 License can be found in the project's LICENSE file. For authoritative interpretation, you may also refer to the official version on the Mozilla website. If you have any questions about the license or require further clarification, please feel free to contact me.
+
+We sincerely appreciate your support and contributions and look forward to your participation in advancing the project. At the same time, please ensure compliance with the MPL 2.0 License to safeguard the project's sustainable open-source ecosystem and protect the legitimate rights and interests of the original authors and all contributors.
 
 Thank you again for your support and involvement!
+
 
 ## ⭐Acknowledgements
 
