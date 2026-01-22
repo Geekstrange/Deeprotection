@@ -408,7 +408,7 @@ Thank you to all developers who have contributed to this project. You can view a
 
 ## ⚖License
 
-![MPL 2.0](https://www.mozilla.org/media/img/legal/mpl2/logo-sm.8af6687ce29b.png)
+![MPL 2.0](https://github.com/Geekstrange/Deeprotection/blob/main/images/MPL.svg)
 
 This project is licensed under the Mozilla Public License Version 2.0 (MPL 2.0). You may freely use, copy, distribute, and modify this project, as well as create derivative works based on it, provided you comply with the following core terms:
 
