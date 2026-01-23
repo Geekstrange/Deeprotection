@@ -411,7 +411,7 @@ Thank you to all developers who have contributed to this project. You can view a
   <a href="https://www.mozilla.org/en-US/MPL/2.0/" target="_blank">
     <img src="https://github.com/Geekstrange/Deeprotection/blob/main/images/Godzilla.gif"
          alt="MPL 2.0"
-         style="width: 120px; height: auto; display: block;"/>
+         style="width: 300px; height: auto; display: block;"/>
   </a>
 </div>
 
