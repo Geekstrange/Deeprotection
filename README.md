@@ -1,6 +1,6 @@
 # Deeprotection
 
-Deeprotection is a security tool developed in Bash. It filters user commands through path protection, command interception, and deletion confirmation. It offers two operation strategies: Enhanced and Permissive modes.
+Deeprotection is a security tool developed in Rust. It filters user commands through path protection, command interception, and deletion confirmation. It offers two operation strategies: Enhanced and Permissive modes.
 
 <p align="center">
   <a href="https://github.com/Geekstrange/Deeprotection">
