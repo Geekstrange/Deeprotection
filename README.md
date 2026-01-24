@@ -405,7 +405,7 @@ You can refer to the architecture design of this project in the [ARCHITECTURE.md
 
 Thank you to all developers who have contributed to this project. You can view all contributors to this project in the [https://github.com/Geekstrange/Deeprotection/tree/main/CONTRIBUTORS) directory.
 
-## ⚖License
+## ⚖️License
 
 <div style="display: inline-flex; align-items: center; gap: 0px; vertical-align: middle;">
   <a href="https://www.mozilla.org/en-US/MPL/2.0/" target="_blank">
