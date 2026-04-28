@@ -1,6 +1,6 @@
 # Deeprotection
 
-Deeprotection is a security tool developed in Bash. It filters user commands through path protection, command interception, and deletion confirmation. It offers two operation strategies: Enhanced and Permissive modes.
+Deeprotection is a high-performance security tool written in Rust. It acts as a secure shell wrapper (`dpshell`) that provides command interception, rule-based matching, plugin extensibility, path protection, audit logging, and password authentication. It offers three operation strategies: Enforcing, Permissive, and Disable modes.
 
 <p align="center">
   <a href="https://github.com/Geekstrange/Deeprotection">
@@ -21,49 +21,23 @@ Deeprotection is a security tool developed in Bash. It filters user commands thr
   </p>
 </p>
 
-## 🌐Find your language!
-
-### 🌏Asia
-
-[🇨🇳简体中文](https://github.com/Geekstrange/Deeprotection/blob/main/README/简体中文.md) 更新至v0.0.5
-
-[🇨🇳繁體中文](https://github.com/Geekstrange/Deeprotection/blob/main/README/繁體中文.md) 更新至v0.0.5
-
-[🇯🇵日本語](https://github.com/Geekstrange/Deeprotection/blob/main/README/日本語.md) 更新至v0.0.5
-
-[🇰🇷한국어](https://github.com/Geekstrange/Deeprotection/blob/main/README/한국어.md) 으로 업데이트v0.0.5
-
-### 🌍Europe
-
-[🇫🇷Français](https://github.com/Geekstrange/Deeprotection/blob/main/README/Français.md) v0.0.1
-
-[🇩🇪Deutsch](https://github.com/Geekstrange/Deeprotection/blob/main/README/Deutsch.sh) v0.0.1
-
-[🇮🇹Italiano](https://github.com/Geekstrange/Deeprotection/blob/main/README/Italiano.md) v0.0.1
-
-[🇷🇺Русский](https://github.com/Geekstrange/Deeprotection/blob/main/README/Русский.md) v0.0.1
-
-[🇸🇪Svenska](https://github.com/Geekstrange/Deeprotection/blob/main/README/Svenska.md) v0.0.1
-
-[🇳🇴Bokmål](https://github.com/Geekstrange/Deeprotection/blob/main/README/Bokmål.md) v0.0.1
-
-[🇩🇰Dansk](https://github.com/Geekstrange/Deeprotection/blob/main/README/Dansk.md) v0.0.1
-
----
+------
 
 ## 📜Table of Contents
 
-- [⚡Quick Start](#⚡quick-start)
-  - [📦Installation](#📦installation)
-- [🔍User Guide](#🔍user-guide)
-  - [🕹Basic Usage](#🕹basic-usage)
-  - [🛠Configuration File Introduction](#🛠configuration-file-introduction)
-  - [📌Log Introduction](#📌log-introduction)
-- [📂Installation Directory](#📂installation-directory)
-- [🔬Technical Details](#🔬technical-details)
-- [📃Contributors List](#📃contributors-list)
-- [⚖License](#⚖license)
-- [⭐Acknowledgements](#⭐acknowledgements)
+- [⚡Quick Start](#quick-start)
+- [📦Installation](#installation)
+- [🔍User Guide](#user-guide)
+- [🕹Basic Usage](#basic-usage)
+- [🛡️Protection Modes](#protection-modes)
+- [🛠Configuration File Introduction](#configuration-file-introduction)
+- [📌Log Introduction](#log-introduction)
+- [🧩Plugin Architecture](#plugin-architecture)
+- [📂Installation Directory](#installation-directory)
+- [🔬Technical Details](#technical-details)
+- [📃Contributors List](#contributors-list)
+- [⚖License](#license)
+- [⭐Acknowledgements](#acknowledgements)
 
 ## ⚡Quick Start
 
@@ -71,357 +45,250 @@ Deeprotection is a security tool developed in Bash. It filters user commands thr
 
 **Automatic Deployment**
 
-Running the `install.sh` script automatically resolves system dependencies and installs the latest Release.
+Running the `install.sh` script automatically resolves system dependencies and installs the latest release.
 
 **Manual Installation**
 
-If you enjoy the fun of manual installation, first run the `check_env.sh` script to automatically deploy the dependent environment.
-
-Then you can obtain the latest version of Deeprotection from the [GitHub repository](https://github.com/Geekstrange/Deeprotection/) and install it.
+You can obtain the latest compiled Rust binary of Deeprotection from the [GitHub repository](https://github.com/Geekstrange/Deeprotection/) and install it via the Debian package manager.
 
 ```bash
 git clone https://github.com/Geekstrange/Deeprotection.git
-
 dpkg -i deeprotection.deb
 ```
-
-**RAW**
-
-The purest manual installation!
-
-If you are a Linux beginner, it is recommended to use this method. The process of manually troubleshooting errors will help improve your Linux skills. Good luck!
 
 ## 🔍User Guide
 
 ### 🕹Basic Usage
 
-**First Launch**
+**First Launch & Context**
 
-The first launch via the dplauncher module automatically obtains the current system language and confirms with the user. You can still manually change it in the configuration file or create your personalized language file.
-
-*Naming Rules*
-
-```
-name_                     # Language Name
-greet_                    # Greeting
-war_                      # Interception Warning Category
-err_                      # Error Warning Category
-log_                      # Log Recording Category
-ask_                      # Message Inquiry Category
-msg_                      # Status Warning Category
-```
-
-Each time you open a new session, it will ask whether to load the protection function. You can turn it off in the configuration file, but you can still directly call the protection kernel by entering the `dp` command in the terminal.
-
-> [!WARNING]
-> **DPSHELL IS JUST AN AUXILIARY TOOL AND CANNOT BE USED AS YOUR DEFAULT SHELL.**
-
-All commands executed in dpshell will not be recorded.
-
-For Linux beginners, you may need to first understand the classification of subshells before starting the tutorial.
-
->- **sub-shell**：Created via `fork`, it can inherit variables, functions, aliases, etc., from the parent `shell`, but modifications to these data will not affect the parent `shell`. Generation methods for `sub-shell` include process replacement, command replacement, `(LIST)`, `|`, or `&`.
->- **child-shell**：Created via `fork-exec` mode, it can only inherit environment variables exported by the parent `shell` through `export`.
+Deeprotection runs as a custom shell environment called `dpshell`. It handles commands natively, logging activity and applying your security rules before executing them via the system's standard shell.
 
 **Enhanced `cd` Command**
 
-In dpshell, entering `cd` changes the directory and echoes the current working path.
+In `dpshell`, the `cd` command comes with interactive built-ins to make terminal navigation cleaner and faster.
+
+**Interactive Single-Level Navigation:** Entering `cd ?` allows you to view numbered subdirectories and input a number to enter the corresponding directory.
 
 ```bash
-(Enter exit or Ctrl+D to quit)
-dpshell(1)# cd DEBUG_BAK/
-/root/DEBUG_BAK
-dpshell(1)#
-```
-
-In dpshell, entering `cd ?` allows you to input a number to enter the corresponding directory.
-
-```bash
-(Enter exit or Ctrl+D to quit)
 dpshell(1)# cd ?
-1) DEBIAN/
-2) etc/
-3) usr/
-4) var/
-Select a directory (Enter q to quit):
+1) amd64
+2) arm64
+3) debug
+4) test_space
+Select directory (enter q to quit):
 ```
 
-In dpshell, entering `cd ??` enables you to consecutively select directories and hidden directories.
+**Recursive Navigation:** Entering `cd ??` enables a recursive directory browser, allowing you to traverse up and down the file tree interactively.
 
 ```bash
-(Enter exit or Ctrl+D to quit)
 dpshell(1)# cd ??
-1) DEBIAN
-2) etc
-3) usr
-4) var
-l] Go back to the parent directory
+1) debug
+2) test_space
+3) arm64
+4) amd64
+l] Back to parent directory
 q] Exit recursive mode
-Current directory: /root/develop/deeprotection >
+Current directory: /root/dpshell >
 ```
+
+**Nested Level Prompt**
+
+The environment variable `DPSHELL_LEVEL` tracks nesting depth. The prompt displays as `dpshell(level)$ ` (or `#` for root), helping you identify the current shell nesting level.
+
+### 🛡️ Protection Modes
+
+Deeprotection operates in one of three modes, defined in your configuration file.
+
+**Disable Mode**
+
+Commands pass through without modification or blocking. Activity is strictly logged to the audit file. No rules, plugins, or path protection are applied.
 
 **Permissive Mode**
 
-This mode only has command interception, command replacement, and interception of rm \* commands (unlimited for \*.txt commands)
+Commands are evaluated against your defined `[[rules]]` and any active plugins. Path protection is **ignored**. This is excellent for testing rule logic.
 
-Usage 1: Run with dp followed by a command
+**Enforcing Mode**
 
-```bash
-root@hyperv:~/develop/# dp echo Hello!
-Hello!
-```
-
-Usage 2: Directly run the dp command
+Strict security. Commands are evaluated against rules, plugins, and finally, the path protection engine. Operations involving commands in the `allowlist` targeting protected directories will require password authentication. Commands not in the `allowlist` will be blocked immediately.
 
 ```bash
-root@hyperv:~/develop/# dp
-dpshell>
-(Enter exit or press Ctrl+D to exit)
-dpshell(1)# echo Hello!
-Hello!
+dpshell(1)# ls test/
+[!] Protected path operation requires authorization.
+Admin password:
 ```
 
-* Interception Function
+**Password Authentication**
 
-Configuration file example
-
-```
- 42 #command_intercept_rules
- 43 echo
-```
-
-Add commands to be intercepted under the `#command_intercept_rules` line
-
-Running effect (demonstrated in child shell mode)
-
-```
-root@hyperv:~/develop# dp
-dpshell>
-(Enter exit or press Ctrl+D to exit)
-dpshell(1)# echo
-[!] Intercepted echo
-```
-
-* Command Replacement Function
-
-Configuration file example
-
-```
- 42 #command_intercept_rules
- 44 echo 111 > echo 222
-```
-
-Running effect (demonstrated in child shell mode)
-
-```
-root@hyperv:~/develop# dp
-dpshell>
-(Enter exit or press Ctrl+D to exit)
-dpshell(1)# echo 111
-[!] Original command: echo 111 -> Replaced with: echo 222
-222
-```
-
-* rm \* Command Interception
-
-Enabled by default, no configuration file setup required
-
-Running effect (demonstrated in child shell mode)
-
-```
-1. Intercept rm \* commands
-
-root@hyperv:~/develop# dp
-dpshell>
-(Enter exit or press Ctrl+D to exit)
-dpshell(1)# rm -rf *
-[!] Intercepted: Detected 'rm \*' operation, blocked
-
-2. Allow rm *.txt commands
-
-root@hyperv:~/developl# dp
-dpshell>
-(Enter exit or press Ctrl+D to exit)
-dpshell(1)# ls
-1.txt  2.txt  3.txt  test
-dpshell(1)# rm -f *.txt
-dpshell(1)# ls
-test
-```
-
-**Enhanced Mode**
-
-This mode strictly distinguishes between upper and lower case in the configuration file. Please ensure proper spelling of `Enhanced`.
-
-Enhanced mode interception process: Directory protection ---> Command interception ---> rm command reinforcement
-
-The command interception function has been demonstrated. This section only showcases the directory protection and rm command reinforcement functions.
-
-* Directory Protection
-
-Configuration file example
-
-```
- 37 #protected_paths_list
- 38 /root/develop
-```
-
-> [!CAUTION]
-> **BECAUSE IT PROVIDES RECURSIVE PROTECTION, DO NOT ADD `/` AS A RULE.**
-
-Running effect (demonstrated in shell mode)
-
-*Prohibits executing all commands under the protected directory*
-
-```
-root@hyperv:~/develop# dp
-dpshell>
-(Enter exit or press Ctrl+D to exit)
-dpshell(1)# echo
-[!] Warning: Operations on protected path /root/develop are prohibited
-```
-
-* rm Command Reinforcement
-
-No configuration file setup required
-
-Running effect (demonstrated in shell mode)
-
-```
-root@hyperv:~/develop# dp
-dpshell>
-(Enter exit or press Ctrl+D to exit)
-dpshell(1)# rm -rf 111
-[!] About to execute: /bin/rm -i -v -r 111
-/bin/rm: remove regular empty file '111'? y
-removed '111'
-```
+In `enforcing` mode, when operating on protected paths with allowlisted commands, you will be prompted for password authentication (up to 3 attempts). The password is verified using SHA-256 against the hash stored in the configuration file.
 
 ### 🛠Configuration File Introduction
 
-> [!TIP]
-> **Only the English version is actually installed**
+Deeprotection uses a clean, minimalist TOML configuration file located at `/etc/deeprotection/config.toml`.
 
-You can customize Deeprotection's behavior through the `/etc/deeprotection/deeprotection.conf` file, such as adding custom high-risk commands and path protection rules.
+```toml
+[core]
+# Operating mode: "disable", "permissive", or "enforcing"
+mode = "enforcing"
 
+[auth]
+# SHA-256 hex digest of admin password (generate with: echo -n "pass" | sha256sum)
+password_hash = "31fc7f00f4a0f72653d3ba5f445b8c21d922ae786da3f0a3a780f573942d00aa"
+
+[paths]
+# Directories that are strictly protected against modification commands
+protect = ["/root/test", "/root/.ssh"]
+
+# Commands allowed to operate on protected paths (requires authentication)
+allowlist = ["rm", "rmdir", "mv", "cp", "chmod", "chown", "touch", "cat", "ls"]
+
+# ---------------------User Rules---------------------
+
+[[rules]]
+name = "block_rm_rf"
+pattern = "rm -rf"
+action = { block = true }
+enabled = true
+
+[[rules]]
+name = "replace_echo"
+pattern = "re:^echo 111$"
+action = { replace = "echo 222" }
+enabled = true
 ```
-# This is the Deeprotection configuration file.
-# Here is an explanation for each configuration item.
 
-# Language settings: Automatically obtained on first run.
-# To manually set the language, use standard language codes.
-# Language file path: /usr/share/locale/deeprotection
-language=
+**Rule Pattern Types:**
 
+- **Plain string**: Automatically converted to an anchored regex that allows flexible whitespace (e.g., `"rm -rf"` becomes `^\s*rm\s+-rf\s*$`).
+- **Explicit regex**: Prefixed with `re:` (e.g., `"re:^echo 111$"`).
 
-# Startup settings: Default is false,
-# which means it is enabled; set to true to disable.
-disable=false
+**Rule Actions:**
 
-
-# Default disable duration settings: Select the
-# disable duration in hours when choosing n.
-expire_hours=2
-
-
-# Temporary disable timestamp: Records the time of temporary disablement.
-timestamp=
-
-
-# Set auto-update: Default is disabled.
-# To enable, change to enable.
-update=disable
-
-
-# Protection mode: Default is permissive mode.
-# To enable enhanced mode, manually change to Enhanced
-# Note that enhanced mode is case-sensitive.
-mode=permissive
-
-#---------------------User Rules---------------------
-
-# Protected paths settings: Enabled in enhanced mode.
-#protected_paths_list
-/your/protect/path/here
-# Command interception rules.
-# If there is no > after the command,
-# the command will be directly intercepted.
-#command_intercept_rules
-^:\s*()\s*{\s*:\s*|\s*:\s*&\s*}\s*;\s*: > echo "Detected Fork Bomb attack!"
-^\s*function\s+\w+\s*$\s*$\s*{.*\|\s*&.*} > echo "Detected Pipeline background execution attack pattern"
-```
+- `block = true`: Block the command and log the action.
+- `replace = "new command"`: Replace the command with the specified string.
 
 ### 📌Log Introduction
 
+Logs use the JSON Lines (JSONL) format for seamless integration with modern log aggregators and dashboard tools. Logs are safely appended to `/var/log/audit.log`.
+
+**Log Field Definitions:**
+
+| Field         | Type   | Description                                 |
+| ------------- | ------ | ------------------------------------------- |
+| `timestamp`   | string | ISO 8601 UTC (second precision)             |
+| `level`       | string | INFO / WARN                                 |
+| `user`        | string | Username who executed the command           |
+| `mode`        | string | disable / permissive / enforcing            |
+| `command`     | string | Original user input command                 |
+| `working_dir` | string | Current working directory at execution time |
+| `pid`         | u32    | Process ID                                  |
+| `exit_code`   | i32    | Exit code (reserved, currently 0)           |
+| `message`     | string | Additional info (e.g., "blocked by rule")   |
+
+**Example Log Entry:**
+
+```json
+{"timestamp":"2025-04-13T10:30:22Z","level":"WARN","user":"alice","mode":"enforcing","command":"rm /etc/passwd","working_dir":"/home/alice","pid":1234,"exit_code":0,"message":"blocked: command not in allowlist (final: rm /etc/passwd)"}
+{"timestamp":"2025-04-13T10:32:05Z","level":"INFO","user":"alice","mode":"permissive","command":"echo 111","working_dir":"/home/alice","pid":1235,"exit_code":0,"message":"replaced to: echo 222"}
 ```
-2025-05-12 22:10:20 | user: root | command: -f rm+pt | path: /root/develop | current_pid: 1561 | exit_code: 0
-   Command execution time     |   Executing user  |                Command executed                 |        Command PID     | Command exit code
+
+### 🧩Plugin Architecture
+
+Deeprotection supports external extensibility via a robust plugin system. Drop your plugins into `/etc/deeprotection/plugins/<plugin-name>/`.
+
+**Plugin Directory Structure:**
+
 ```
+/etc/deeprotection/plugins/
+  example-plugin/
+    plugin.json
+    entrypoint_script
+```
+
+**`plugin.json` Format:**
+
+```json
+{
+  "id": "example-plugin",
+  "name": "Example Plugin",
+  "version": "1.0.0",
+  "author": "Jane Doe",
+  "description": "Description of what the plugin does.",
+  "enabled": true,
+  "entrypoint": "entrypoint_script"
+}
+```
+
+**Plugin Invocation Model:**
+
+- The command string is passed to the plugin via **stdin** and the environment variable `DPSHELL_COMMAND`.
+- The plugin must exit with a specific code:
+  - `0` → Allow the command (stdout ignored).
+  - `1` → Block the command.
+  - `2` → Replace the command; stdout must contain the new command string.
+- Any other exit code, timeout (>5 seconds), or spawn failure results in **fail-open** (allow original command, warn to stderr).
+
+**Execution Order:** Plugins are run **synchronously** in the order they were discovered (directory scan order). The command may be transformed by each plugin in sequence.
 
 ## 📂Installation Directory
 
 ```
 ├── etc
-│   └── deeprotection
-│       └── deeprotection.conf
+│   └── deeprotection
+│       ├── config.toml
+│       └── plugins
+│           └── example-plugin
+│               ├── plugin.json
+│               └── main
 ├── usr
-│   ├── bin
-│   │   ├── dplauncher
-│   │   ├── dploader
-│   │   └── dp
-│   └── share
-│       ├── doc
-│       │   └── deeprotection
-│       │       ├── changelog.gz
-│       │       ├── copyright
-│       │       ├── OVERVIEW.gz
-│       │       └── README.gz
-│       ├── icons
-│       │   └── deeprotection.svg
-│       └── locale
-│           └── deeprotection
-│               ├── da_DK
-│               ├── de_DE
-│               ├── en_US
-│               ├── fr_FR
-│               ├── it_IT
-│               ├── ja_JP
-│               ├── ko_KR
-│               ├── nb_NO
-│               ├── ru_RU
-│               ├── sv_SE
-│               ├── zh_CN
-│               └── zh-Hant
+│   └── bin
+│       └── dp
 └── var
     └── log
-        └── deeprotection.log
+        └── audit.log
 ```
 
 ## 🔬Technical Details
 
 You can refer to the architecture design of this project in the [ARCHITECTURE.md](https://github.com/Geekstrange/Deeprotection/blob/main/ARCHITECTURE.md) file.
 
+**Key Architecture Highlights:**
+
+- **Modular Design**: Clear separation of concerns with dedicated modules for rules, plugins, path protection, and logging.
+- **Configuration-Driven**: All security policies are defined in TOML configuration files.
+- **Fail-Open Philosophy**: Plugin failures default to allowing the original command with a warning.
+- **Thread-Safe Logging**: Mutex-protected file writes ensure safe concurrent access.
+
+**Core Dependencies:**
+
+| Crate        | Purpose                                      |
+| ------------ | -------------------------------------------- |
+| chrono       | Timestamp generation                         |
+| rustyline    | Command-line interface and history           |
+| regex        | Pattern matching for rules                   |
+| anyhow       | Error handling                               |
+| serde/toml   | Configuration parsing                        |
+| sha2         | Password hash verification                   |
+| rpassword    | Secure password input                        |
+| walkdir      | Directory traversal for plugin discovery     |
+
 ## 📃Contributors List
 
-Thank you to all developers who have contributed to this project. You can view all contributors to this project in the [https://github.com/Geekstrange/Deeprotection/tree/main/CONTRIBUTORS) directory.
+Thank you to all developers who have contributed to this project. You can view all contributors to this project in the [CONTRIBUTORS](https://github.com/Geekstrange/Deeprotection/tree/main/CONTRIBUTORS) directory.
 
 ## ⚖License
 
 <div style="display: inline-flex; align-items: center; gap: 0px; vertical-align: middle;">
-  <a href="https://www.mozilla.org/en-US/MPL/2.0/" target="_blank">
-    <img src="https://github.com/Geekstrange/Deeprotection/blob/main/images/Godzilla.gif"
-         alt="MPL 2.0"
-         style="width: 300px; height: auto; display: block;"/>
-  </a>
+
+<a href="https://www.mozilla.org/en-US/MPL/2.0/" target="_blank">
+
+<img src="https://github.com/Geekstrange/Deeprotection/blob/main/images/Godzilla.gif" alt="MPL 2.0" style="width: 300px; height: auto; display: block;"/>
+
+</a>
+
 </div>
 
-This project is licensed under the Mozilla Public License Version 2.0 (MPL 2.0). You may freely use, copy, distribute, and modify this project, as well as create derivative works based on it, provided you comply with the following core terms:
-
-1. **Attribution**: You must retain the original author's attribution information in all copies or derivative works of this project, without altering or removing such content.
-
-2. **Usage Rights**: Both commercial and non-commercial use of this project is permitted. You may derive economic benefits from this project through commercial activities, provided such activities comply with this license and relevant laws.
-
-3. **Derivative Works**: If you modify this project or create derivative works based on it, the modified source code files (i.e., "Modified Files") must also be licensed under MPL 2.0 and made publicly available. When combining this project's source code with code under other licenses, only this project's source code and its modifications are subject to MPL 2.0, while other parts shall follow their respective licenses. Please note that the MPL 2.0 License does not exempt you from other legal obligations or liabilities arising from the use of this project. You shall assume all risks and consequences incurred by using this project. The original authors and contributors make no express or implied warranties regarding this project (including but not limited to warranties of merchantability, fitness for a particular purpose, and non-infringement), and shall not be liable for any direct or indirect damages resulting from the use of this project. The full text of the MPL 2.0 License can be found in the project's LICENSE file. For authoritative interpretation, you may also refer to the [official version on the Mozilla website](https://www.mozilla.org/en-US/MPL/2.0/). If you have any questions about the license or require further clarification, please feel free to contact me. We sincerely appreciate your support and contributions and look forward to your participation in advancing the project. At the same time, please ensure compliance with the MPL 2.0 License to safeguard the project's sustainable open-source ecosystem and protect the legitimate rights and interests of the original authors and all contributors. Thank you again for your support and involvement!
+This project is licensed under the Mozilla Public License Version 2.0 (MPL 2.0). You may freely use, copy, distribute, and modify this project, as well as create derivative works based on it, provided you comply with the core terms outlined in the LICENSE file.
 
 ## ⭐Acknowledgements
 
@@ -429,5 +296,10 @@ This project is licensed under the Mozilla Public License Version 2.0 (MPL 2.0).
 
 **Listed in alphabetical order, no ranking implied**
 
-[ShellCheck](https://www.shellcheck.net/) provides us with a shell script analysis tool that helps enhance the project's code quality.
+**Rust Toolchain**: For providing the memory-safe and highly performant foundation of the refactored engine.
 
+**Rustyline**: For powering the robust command-line interface, history management, and autocompletion features.
+
+**Regex Crate**: For enabling efficient pattern matching in the rule engine.
+
+**SHA2 & rpassword**: For secure password authentication in enforcing mode.

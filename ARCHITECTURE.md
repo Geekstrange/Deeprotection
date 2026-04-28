@@ -1,337 +1,318 @@
-[English](#dpArchitectureTechnicalDocument)
+# Deeprotection (Shell Wrapper) Architecture Document
 
-[简体中文](#dp架构技术文档)
+## 1. Overview
 
-# dp Architecture Technical Document
+Deeprotection (Shell Wrapper) is a command-line security wrapper that provides command interception, rule-based matching, plugin extensibility, path protection, audit logging, and password authentication. The refactored architecture emphasizes modularity, configuration-driven behavior, and a clear separation of concerns while retaining distinctive interactive features (interactive `cd` navigation, nested level prompt, startup animation).
 
-## Overall Architecture Diagram
+## 2. High-Level Architecture Diagram
+
 ```mermaid
 graph TD
-    A[User Input] --> B[Mode Checking Module]
+    A[User Input] --> B[Input Processing]
     B --> C{Mode Selection}
-    C -->|Enhanced| D[Command Pipeline Module]
-    C -->|Permissive| E[Command Interception Module]
-    D --> F[Path Protection Module]
-    D --> G[Command Interception Module]
-    D --> H[Deletion Confirmation Module]
-    F --> I[Configuration File Parsing]
-    G --> J[Regular Expression Matching]
-    H --> K[Interactive Deletion]
+    C -->|disable| D[Log Only]
+    C -->|permissive| E[Rule Matching Module]
+    C -->|enforcing| F[Full Protection Chain]
+
+    E --> G{Rule Action}
+    G -->|block| H[Block & Log]
+    G -->|replace| I[Replace & Execute]
+    G -->|no match| J[Plugin Pipeline]
+    J --> K[Execute Command]
+
+    F --> L[Rule Matching Module]
+    L --> M{Rule Action}
+    M -->|block| N[Block & Log]
+    M -->|replace| O[Replace Command]
+    O --> P[Plugin Pipeline]
+    M -->|no match| P
+    P --> Q[Path Protection Check]
+    Q -->|allowed| R[Execute Command]
+    Q -->|requires auth| S{Password Auth}
+    S -->|success| R
+    S -->|failure| T[Block & Log]
+    Q -->|blocked| T
+
+    D --> U[JSON Lines Log]
+    H --> U
+    I --> U
+    N --> U
+    R --> U
+    T --> U
+
+    subgraph Auxiliary Modules
+        V[cd Interactive Navigation]
+        W[Startup Animation]
+        X[Nested Level Prompt]
+        Y[Command History /tmp]
+    end
 ```
 
-## Core Module Explanation
+## 3. Core Module Descriptions
 
-### 1. Mode Checking Module (check_mode_module)
-```mermaid
-flowchart LR
-    S[Entry Point] --> C1[Configuration File Parsing]
-    C1 --> C2{mode Parameter}
-    C2 -->|Enhanced| C3[Full Protection Chain]
-    C2 -->|Permissive| C4[Basic Interception Mode]
-```
+### 3.1 Mode Selection & Dispatching
 
-- **Features**:
-  - Supports two operation modes:
-    - Enhanced: Full protection chain (default strict mode)
-    - Permissive: Basic command interception only
-  - Case-sensitive strict mode check
-  - Automatic termination on configuration errors
+- **Responsibility**: Determine the command processing flow based on `core.mode` in the configuration file.
+- **Three Modes**:
+  - `disable`: Execute unconditionally; log only (no rules, plugins, or path protection).
+  - `permissive`: Apply rules, then run plugins; **no path protection**.
+  - `enforcing`: Full chain: rule matching → plugins → path protection (with password authentication when required).
+- **Implementation**: Mode branching in the main loop (`main.rs`).
 
-### 2. Command Pipeline Module (command_pipeline_module)
-```mermaid
-sequenceDiagram
-    User->>+Pipeline Module: Input Command
-    Pipeline Module->>+Path Protection: Check Path
-    Path Protection-->>-Pipeline Module: Return Status Code
-    Pipeline Module->>+Command Interception: Pattern Matching
-    Command Interception-->>-Pipeline Module: Replacement/Interception Result
-    Pipeline Module->>+Deletion Confirmation: Interactive Processing
-    Deletion Confirmation-->>-User: Final Execution Result
-```
+### 3.2 Rule Matching Module
 
-- **Plugin Extension Mechanism**:
-  1. Add to configuration file `/etc/deeprotection/deeprotection.conf`:
-   ```conf
-   #command_intercept_rules
-   original_command > replacement_command
-   ```
-  2. Supported regular expression matching rules:
-   - `rm /` → `echo "protected"`
-   - `chmod 777 *` → `""` (direct interception)
-
-### 3. Path Protection Module (protected_paths_module)
-```mermaid
-classDiagram
-    class PathValidator {
-        +load_protected_paths()
-        +realpath standardization()
-        +prefix matching algorithm()
-    }
-```
-
-- **Technical Implementation**:
-  - Uses `realpath -m` for path standardization
-  - Prefix matching algorithm time complexity: O(n)
-  - Supports wildcard path configuration:
-   ```conf
-   #protected_paths_list
-   /usr/lib/*
-   /etc/passwd
-   ```
-
-### 4. Command Interception Module (command_intercept_module)
-```mermaid
-stateDiagram-v2
-    [*] --> Command Parsing
-    Command Parsing --> Regular Expression Matching: Full Command Matching
-    Regular Expression Matching --> Interception Processing: On Match Success
-    Interception Processing --> Replacement Execution: If Replacement Command Exists
-    Interception Processing --> Full Interception: On Empty Replacement
-    Regular Expression Matching --> Star Protection: Check for 'rm *' if No Match
-```
-
-- **Core Algorithm**:
-  ```python
-  def star_protection(files):
-      current_files = os.listdir()
-      if sorted(files) == sorted(current_files):
-          return "Block 'rm *' operation"
+- **Configuration Source**: `[[rules]]` TOML array in `/etc/deeprotection/config.toml`.
+- **Rule Compilation**: Each rule is compiled into a `CompiledRule` at startup, containing a regex pattern and an action (block or replace). Disabled rules are skipped.
+- **Matching Flow**: Rules are evaluated in the order they appear; **first match wins**.
+- **Pattern Types**:
+  - **Plain string**: Automatically converted to an anchored regex that allows flexible whitespace (e.g., `"rm -rf"` becomes `^\s*rm\s+-rf\s*$`).
+  - **Explicit regex**: Prefixed with `re:` (e.g., `"re:^echo 111$"`).
+- **Rule Example**:
+  ```toml
+  [[rules]]
+  name = "block_rm_rf"
+  pattern = "rm -rf"
+  action = { block = true }
+  enabled = true
+  
+  [[rules]]
+  name = "replace_echo"
+  pattern = "re:^echo 111$"
+  action = { replace = "echo 222" }
+  enabled = true
   ```
 
-### 5. Deletion Confirmation Module (rm_replace_module)
+### 3.3 Path Protection Module (Enforcing Mode Only)
+
+- **Responsibility**: In `enforcing` mode, after rules and plugins have produced a final command, determine if that command operates on a protected path and whether authentication or blocking is required.
+- **Configuration Keys**:
+  - `[paths] protect`: List of absolute directory prefixes considered protected.
+  - `[paths] allowlist`: List of command basenames (e.g., `"rm"`, `"cat"`) that are permitted to operate on protected paths, subject to authentication.
+- **Detection Logic**:
+  1. Parse the command line into tokens; the command basename is extracted (e.g., `/bin/rm` → `rm`).
+  2. Identify explicit path arguments (non‑flag tokens) and resolve them to absolute paths.
+  3. If any explicit argument starts with a protected prefix, a protected path is involved.
+  4. If no explicit path argument exists but the current working directory itself is under a protected prefix, the command implicitly operates on a protected path (e.g., `ls`, `touch newfile` inside `/root`).
+- **Policy Decision**:
+  - If no protected path is touched → `Allowed` (execute normally).
+  - If a protected path **is** touched:
+    - Command is in `allowlist` → `RequiresAuth` (prompt for password; execute on success).
+    - Command is NOT in `allowlist` → `Blocked` (reject immediately).
+    - If `allowlist` is empty → `Blocked` (secure default).
+- **Authentication**: Password prompt (up to 3 attempts) using SHA‑256 verification against `[auth].password_hash`.
+
+### 3.4 Plugin System
+
+- **Directory**: `/etc/deeprotection/plugins/`
+- **Plugin Structure**: Each plugin resides in its own subdirectory named after its ID:
+  ```
+  /etc/deeprotection/plugins/
+    example-plugin/
+      plugin.json
+      entrypoint_script
+  ```
+- **`plugin.json` Format**:
+  ```json
+  {
+    "id": "example-plugin",
+    "name": "Example Plugin",
+    "version": "1.0.0",
+    "author": "Jane Doe",
+    "description": "Description of what the plugin does.",
+    "enabled": true,
+    "entrypoint": "entrypoint_script"
+  }
+  ```
+  - `entrypoint` may be an absolute path or relative to the plugin directory.
+- **Invocation Model**:
+  - The command string is passed to the plugin via **stdin** and the environment variable `DPSHELL_COMMAND`.
+  - The plugin must exit with a specific code:
+    - `0` → allow the command (stdout ignored).
+    - `1` → block the command.
+    - `2` → replace the command; stdout must contain the new command string.
+  - Any other exit code, timeout (>5 seconds), or spawn failure results in **fail‑open** (allow original command, warn to stderr).
+- **Execution Order**: Plugins are run **synchronously** in the order they were discovered (directory scan order). The command may be transformed by each plugin in sequence.
+
+### 3.5 Logging Module
+
+- **Format**: JSON Lines (one JSON object per line).
+- **Log File**: `/var/log/audit.log` (auto‑created with append mode).
+- **Field Definitions**:
+
+| Field         | Type   | Description                                 |
+| ------------- | ------ | ------------------------------------------- |
+| `timestamp`   | string | ISO 8601 UTC (second precision)             |
+| `level`       | string | INFO / WARN                                 |
+| `user`        | string | Username who executed the command           |
+| `mode`        | string | disable / permissive / enforcing            |
+| `command`     | string | Original user input command                 |
+| `working_dir` | string | Current working directory at execution time |
+| `pid`         | u32    | Process ID                                  |
+| `exit_code`   | i32    | Exit code (reserved, currently 0)           |
+| `message`     | string | Additional info (e.g., "blocked by rule")   |
+
+- **Thread Safety**: A `Mutex<LineWriter<File>>` ensures writes are safe from a single-threaded main loop.
+- **Flushing**: `flush()` is called after each command to guarantee entries are written to disk.
+
+### 3.6 Interactive `cd` Navigation
+
+- **Command Forms**:
+  - `cd ?`  → List non‑hidden subdirectories in the current directory; user selects by number, `q` to quit.
+  - `cd ??` → Recursive directory browser; displays subdirectories level‑by‑level; `l` to go up, `q` to quit.
+- **Implementation**: Handled entirely within the `cd` module; all messages are hardcoded in English (i18n removed per architectural simplification).
+
+### 3.7 Auxiliary Features
+
+- **Startup Animation**: The string `"dpshell>"` slides from left to right across the terminal using ANSI cursor control.
+- **Nested Level Prompt**: Environment variable `DPSHELL_LEVEL` tracks nesting depth; prompt displays as `dpshell(level)$ ` (or `#` for root).
+- **Command History**: Stored in `/tmp/dpshell_history.<random hex>`; file is deleted on clean exit. The random suffix reduces the risk of collision across concurrent sessions.
+
+## 4. Configuration File Format (TOML)
+
+**Path**: `/etc/deeprotection/config.toml`
+
+```toml
+[core]
+mode = "enforcing"      # disable / permissive / enforcing
+
+[auth]
+# SHA-256 hex digest of admin password (generate with: echo -n "pass" | sha256sum)
+password_hash = "31fc7f00f4a0f72653d3ba5f445b8c21d922ae786da3f0a3a780f573942d00aa"
+
+[paths]
+protect = ["/root/test", "/root/.ssh"]
+allowlist = ["rm", "rmdir", "mv", "cp", "chmod", "chown", "touch", "cat", "ls"]
+
+[[rules]]
+  id = "bf76f496a137"
+  name = "block_echo"
+  pattern = "echo"
+  enabled = false
+  [rules.action]
+    block = true
+
+[[rules]]
+  id = "bf76f4963416"
+  name = "replace_echo_111"
+  pattern = "echo 111"
+  enabled = true
+  [rules.action]
+    replace = "echo 222"
+```
+
+- **Notes**:
+  - The `language` key is **not** supported; all UI messages are in English.
+  - An empty `allowlist` means **no** command may operate on a protected path (blocked immediately).
+
+## 5. Log Output Example
+
+```json
+{"timestamp":"2025-04-13T10:30:22Z","level":"WARN","user":"alice","mode":"enforcing","command":"rm /etc/passwd","working_dir":"/home/alice","pid":1234,"exit_code":0,"message":"blocked: command not in allowlist (final: rm /etc/passwd)"}
+{"timestamp":"2025-04-13T10:32:05Z","level":"INFO","user":"alice","mode":"permissive","command":"echo 111","working_dir":"/home/alice","pid":1235,"exit_code":0,"message":"replaced to: echo 222"}
+```
+
+## 6. Core Flow Sequence Diagram (Enforcing Mode)
+
 ```mermaid
-flowchart TB
-    R[rm Command] --> R1[Argument Parsing]
-    R1 --> R2{Contains -f parameter?}
-    R2 -->|Yes| R3[Enforce Addition of -i parameter]
-    R2 -->|No| R4[Retain Original Parameters]
-    R3 --> R5[Interactive Deletion]
+sequenceDiagram
+    participant U as User
+    participant S as Shell Main Loop
+    participant R as Rule Matching
+    participant P as Plugins
+    participant PP as Path Protection
+    participant A as Authentication
+    participant E as Command Executor
+    participant L as Logger
+
+    U->>S: Input command
+    S->>R: Apply rules
+    alt Rule blocks
+        R-->>S: Return None
+        S->>L: Log WARN (blocked)
+        S-->>U: Show block message
+    else Rule replaces
+        R-->>S: Return new command
+        S->>P: Run plugins
+        P-->>S: Possibly transformed command
+        S->>PP: Check protected paths
+        alt Path not involved
+            PP-->>S: Allowed
+            S->>E: Execute
+            S->>L: Log INFO
+        else Requires auth
+            PP-->>S: RequiresAuth
+            S->>A: Prompt for password
+            alt Auth success
+                A-->>S: Granted
+                S->>E: Execute
+                S->>L: Log INFO
+            else Auth failure
+                A-->>S: Denied
+                S->>L: Log WARN
+                S-->>U: Show block
+            end
+        else Blocked (not allowlisted)
+            PP-->>S: Blocked
+            S->>L: Log WARN
+            S-->>U: Show block
+        end
+    else No rule match
+        R-->>S: Return original command
+        S->>P: Run plugins
+        P-->>S: Possibly transformed command
+        S->>PP: Check protected paths
+        alt Allowed
+            PP-->>S: Allowed
+            S->>E: Execute
+            S->>L: Log INFO
+        else Requires auth / Blocked
+            PP-->>S: (as above)
+        end
+    end
 ```
 
-- **Forced Protection Mechanism**:
-  - Always add `-i` for interactive confirmation regardless of parameters
-  - Output format: `[!] About to execute: /bin/rm -i -v filename`
-  - Visual warning: flashing red alert
+## 7. Extension Points & Customization Guide
 
-## Logging System Design
-```mermaid
-gantt
-    title Log Record Entries
-    dateFormat  YYYY-MM-DD HH:mm:ss
-    section Log Fields
-    Timestamp           :a1, 2023-10-01 12:00:00, 1s
-    User Identity       :after a1, 1s
-    Full Command        :after a1, 2s
-    Execution Path      :after a1, 3s
-    PID Information     :after a1, 4s
-    Exit Status Code    :after a1, 5s
+### 7.1 Adding a New Rule
+Add an entry to the `[[rules]]` array in `/etc/deeprotection/config.toml`. No code changes required.
+
+### 7.2 Adding a New Plugin
+Create a subdirectory under `/etc/deeprotection/plugins/` with a `plugin.json` manifest and an executable entrypoint. The shell will discover and load it on next startup.
+
+### 7.3 Modifying Protected Paths or Allowed Commands
+Edit the `[paths]` section of the configuration file; changes take effect on the next shell start.
+
+### 7.4 Extending the Shell with New Built‑in Commands
+Add a new match arm in the `execute_command`‑like dispatching (currently `cd` is the only built‑in). Follow the existing pattern in `main.rs`.
+
+### 7.5 Customizing Log Output
+Modify the `LogEntry` struct and `JsonLinesWriter` in `logger.rs`.
+
+## 8. Dependencies (Cargo.toml Excerpt)
+
+```toml
+[dependencies]
+chrono = "0.4"
+rustyline = "14"
+regex = "1.10"
+anyhow = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+toml = "0.8"
+ctrlc = "3"
+users = "0.11"
+fluent = "0.16"
+fluent-bundle = "0.15"
+unic-langid = { version = "0.9", features = ["macros"] }
+intl-memoizer = "0.5"
+walkdir = "2.4"
+terminal_size = "0.3"
+sha2 = "0.10"
+rpassword = "7"
 ```
 
-- **Security Design**:
-  - Automatic log directory creation (ACL: 700)
-  - Log file permissions: `-rw-r-----`
-  - Log injection protection: escape special characters
-
-## Configuration File Example
-```conf
-#deeprotection.conf
-
-#protected_paths_list
-/etc/
-/root/.ssh
-/boot/
-
-#command_intercept_rules
-rm -rf /* > 
-chmod 777 * > chmod 755
-```
-
-## Extension Development Guide
-
-### Plugin Development Interface
-```bash
-# Custom Plugin Template
-_my_plugin() {
-    local command="$@"
-    # Detection Logic
-    if [[ "$command" =~ dangerous_pattern ]]; then
-        output_log "[PLUGIN] Blocked Dangerous Command"
-        return 1
-    fi
-    return 0
-}
-
-# Insert into Pipeline Module
-command_pipeline_module() {
-    _my_plugin "$@" || return 1
-    protected_paths_module "$@" || return 1
-    ...
-}
-```
 ---
-# dp 架构技术文档
 
-## 整体架构图
-```mermaid
-graph TD
-    A[用户输入] --> B[模式检查模块]
-    B --> C{模式选择}
-    C -->|Enhanced| D[命令管道模块]
-    C -->|Permissive| E[命令拦截模块]
-    D --> F[路径保护模块]
-    D --> G[命令拦截模块]
-    D --> H[删除确认模块]
-    F --> I[配置文件解析]
-    G --> J[正则表达式匹配]
-    H --> K[交互式删除]
-```
-
-## 核心模块说明
-
-### 1. 模式检查模块 (check_mode_module)
-```mermaid
-flowchart LR
-    S[启动入口] --> C1[配置文件解析]
-    C1 --> C2{mode参数}
-    C2 -->|Enhanced| C3[完整防护链]
-    C2 -->|Permissive| C4[基础拦截模式]
-```
-
-- **功能特性**：
-  - 支持两种运行模式：
-    - Enhanced：完整防护链（默认严格模式）
-    - Permissive：仅基础命令拦截
-  - 严格模式检查（区分大小写）
-  - 配置错误自动终止
-
-### 2. 命令管道模块 (command_pipeline_module)
-```mermaid
-sequenceDiagram
-    用户->>+管道模块: 输入命令
-    管道模块->>+路径保护: 检查路径
-    路径保护-->>-管道模块: 返回状态码
-    管道模块->>+命令拦截: 模式匹配
-    命令拦截-->>-管道模块: 替换/拦截结果
-    管道模块->>+删除确认: 交互式处理
-    删除确认-->>-用户: 最终执行结果
-```
-
-- **插件扩展机制**：
-  1. 通过修改配置文件 `/etc/deeprotection/deeprotection.conf` 添加：
-   ```conf
-   #command_intercept_rules
-   original_command > replacement_command
-   ```
-  2. 支持的正则表达式匹配规则：
-   - `rm /` → `echo "protected"`
-   - `chmod 777 *` → `""` (直接拦截)
-
-### 3. 路径保护模块 (protected_paths_module)
-```mermaid
-classDiagram
-    class PathValidator {
-        +load_protected_paths()
-        +realpath标准化()
-        +前缀匹配算法()
-    }
-```
-
-- **技术实现**：
-  - 使用 `realpath -m` 进行路径标准化
-  - 前缀匹配算法时间复杂度：O(n)
-  - 支持通配符路径配置：
-   ```conf
-   #protected_paths_list
-   /usr/lib/*
-   /etc/passwd
-   ```
-
-### 4. 命令拦截模块 (command_intercept_module)
-```mermaid
-stateDiagram-v2
-    [*] --> 命令解析
-    命令解析 --> 正则匹配: 完整命令匹配
-    正则匹配 --> 拦截处理: 匹配成功
-    拦截处理 --> 替换执行: 存在替换命令
-    拦截处理 --> 完全拦截: 空替换
-    正则匹配 --> 星号保护: 未匹配时检查rm *
-```
-
-- **核心算法**：
-  ```python
-  def 星号保护(files):
-      current_files = os.listdir()
-      if sorted(files) == sorted(current_files):
-          return "拦截rm *操作"
-  ```
-
-### 5. 删除确认模块 (rm_replace_module)
-```mermaid
-flowchart TB
-    R[rm命令] --> R1[参数解析]
-    R1 --> R2{包含-f参数?}
-    R2 -->|是| R3[强制添加-i参数]
-    R2 -->|否| R4[保留原始参数]
-    R3 --> R5[交互式删除]
-```
-
-- **强制保护机制**：
-  - 无论参数如何都添加 `-i` 交互确认
-  - 输出格式：`[!] 即将执行: /bin/rm -i -v filename`
-  - 视觉警告：闪烁红色提示
-
-## 日志系统设计
-```mermaid
-gantt
-    title 日志记录条目
-    dateFormat  YYYY-MM-DD HH:mm:ss
-    section 日志字段
-    时间戳           :a1, 2023-10-01 12:00:00, 1s
-    用户身份         :after a1, 1s
-    完整命令         :after a1, 2s
-    执行路径         :after a1, 3s
-    PID信息         :after a1, 4s
-    退出状态码       :after a1, 5s
-```
-
-- **安全设计**：
-  - 日志目录自动创建 (ACL: 700)
-  - 日志文件权限：`-rw-r-----`
-  - 日志注入防护：特殊字符转义
-
-## 配置文件示例
-```conf
-#deeprotection.conf
-
-#protected_paths_list
-/etc/
-/root/.ssh
-/boot/
-
-#command_intercept_rules
-rm -rf /* > 
-chmod 777 * > chmod 755
-```
-
-## 扩展开发指南
-
-### 插件开发接口
-```bash
-# 自定义插件模板
-_my_plugin() {
-    local command="$@"
-    # 检测逻辑
-    if [[ "$command" =~ dangerous_pattern ]]; then
-        output_log "[PLUGIN] 拦截危险命令"
-        return 1
-    fi
-    return 0
-}
-
-# 插入到管道模块
-command_pipeline_module() {
-    _my_plugin "$@" || return 1
-    protected_paths_module "$@" || return 1
-    ...
-}
-```
+*Document Version: 2.0*  
+*Last Updated: 2026-04-21*  
+*For the Refactored Deeprotection (Shell Wrapper)*
