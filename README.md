@@ -25,7 +25,6 @@ Deeprotection is a high-performance security tool written in Rust. It acts as a 
 
 ## 📜Table of Contents
 
-- [📦Installation](#installation)
 - [🔍User Guide](#user-guide)
 - [🕹Basic Usage](#basic-usage)
 - [🛡️Protection Modes](#protection-modes)
@@ -37,21 +36,6 @@ Deeprotection is a high-performance security tool written in Rust. It acts as a 
 - [📃Contributors List](#contributors-list)
 - [⚖License](#license)
 - [⭐Acknowledgements](#acknowledgements)
-
-### 📦Installation
-
-**Automatic Deployment**
-
-Running the `install.sh` script automatically resolves system dependencies and installs the latest release.
-
-**Manual Installation**
-
-You can obtain the latest compiled Rust binary of Deeprotection from the [GitHub repository](https://github.com/Geekstrange/Deeprotection/) and install it via the Debian package manager.
-
-```bash
-git clone https://github.com/Geekstrange/Deeprotection.git
-dpkg -i deeprotection.deb
-```
 
 ## 🔍User Guide
 
