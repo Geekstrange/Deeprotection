@@ -4,9 +4,8 @@ Deeprotection is a high-performance security tool written in Rust. It acts as a 
 
 <p align="center">
   <a href="https://github.com/Geekstrange/Deeprotection">
-    <img src="https://github.com/Geekstrange/Deeprotection/blob/main/images/logo.svg" alt="Logo" width="80" height="80">
+    <img src="https://github.com/Geekstrange/Deeprotection/blob/main/images/logo.svg" alt="logo" width="100" height="100">
   </a>
-  <h3 align="center"><span style="color: #3fc680;">Deep</span><span style="color: #3d4650;">rotection</span></h3>
   <h5 align="center">: ) Hello, thank you for using! ⭐</h5>
   <p align="center">
     <br />
