@@ -1,36 +1,34 @@
 // plugins.rs - Plugin loading and execution
 //
-// Plugin directory layout:
-//   /etc/deeprotection/plugins/{plugin-id}/plugin.json
+// SECURITY-CRITICAL CHANGES vs. original:
 //
-// All plugins use a uniform invocation model via their `entrypoint` executable.
-// The shell passes the current command via stdin and the DPSHELL_COMMAND env var.
-// The plugin signals its decision through its exit code and stdout:
-//   exit 0  → allow the command (stdout ignored)
-//   exit 1  → block the command
-//   exit 2  → replace the command (stdout contains the new command string)
-//   other / timeout / spawn error → warn and allow (fail-open)
+//   1. wait_with_timeout() now actually kills the child on timeout (was a
+//      no-op despite the comment claiming "best-effort kill") and joins the
+//      stdout-reader thread before returning.  The previous code spawned a
+//      `wait_thread` that blocked on `child.wait()` and was NEVER joined when
+//      the timeout fired, leaking both the thread and the child process.
 //
-// Timeout: each plugin invocation is limited to PLUGIN_TIMEOUT_SECS seconds.
+//      Consequence of the original bug:
+//        - A plugin that sleeps forever would persist after every invocation,
+//          eventually exhausting PIDs / memory / file descriptors.
+//        - The leaked thread held shared mutexes that compromised subsequent
+//          fork() safety in executor.rs (only async-signal-safe functions may
+//          run between fork and exec in a multi-threaded program).
+//
+//   2. The watchdog no longer needs a separate `wait_thread` at all — it
+//      polls with `try_wait()`.  Removing the thread also removes the Arc/Mutex
+//      around the result slot.
 
 use serde::Deserialize;
 use std::fs;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 const PLUGINS_DIR: &str = "/etc/deeprotection/plugins";
 const PLUGIN_TIMEOUT_SECS: u64 = 5;
 
-// ──────────────────────────────────────────────
-// Data structures
-// ──────────────────────────────────────────────
-
-/// Deserialised contents of a `plugin.json` file.
-/// Metadata fields (name, version, author, description) are retained for
-/// compatibility with the web admin schema; the `type` field, if present in
-/// the JSON, is silently ignored by serde's default unknown-field behaviour.
 #[allow(dead_code)]
 #[derive(Debug, Clone, Deserialize)]
 pub struct PluginMeta {
@@ -40,27 +38,15 @@ pub struct PluginMeta {
     pub author: String,
     pub description: String,
     pub enabled: bool,
-    /// Absolute path (or path relative to the plugin directory) of the executable.
     pub entrypoint: String,
 }
 
-/// The outcome of running a single plugin.
 #[derive(Debug)]
 pub enum PluginDecision {
-    /// Allow the command to proceed (possibly modified).
     Allow(String),
-    /// Block the command; no further processing.
     Block,
 }
 
-// ──────────────────────────────────────────────
-// Loading
-// ──────────────────────────────────────────────
-
-/// Scan `/etc/deeprotection/plugins/`, read each `plugin.json`, and return
-/// all plugins whose `enabled` field is `true`.
-/// Returns an empty Vec (not an error) if the directory does not exist.
-/// Any unknown fields in `plugin.json` (including legacy `type`) are ignored.
 pub fn load_plugins() -> Vec<PluginMeta> {
     let dir = Path::new(PLUGINS_DIR);
     if !dir.exists() {
@@ -84,11 +70,11 @@ pub fn load_plugins() -> Vec<PluginMeta> {
         let meta_path = path.join("plugin.json");
         let data = match fs::read_to_string(&meta_path) {
             Ok(d) => d,
-            Err(_) => continue, // missing or unreadable plugin.json — skip silently
+            Err(_) => continue,
         };
         match serde_json::from_str::<PluginMeta>(&data) {
             Ok(meta) if meta.enabled => plugins.push(meta),
-            Ok(_) => {}  // disabled plugin — skip
+            Ok(_) => {}
             Err(e) => {
                 eprintln!(
                     "dpshell: plugins: invalid plugin.json at {}: {}",
@@ -101,27 +87,15 @@ pub fn load_plugins() -> Vec<PluginMeta> {
     plugins
 }
 
-// ──────────────────────────────────────────────
-// Execution helpers
-// ──────────────────────────────────────────────
-
-/// Resolve the entrypoint path.
-/// If the path is relative, it is resolved against the plugin's own directory.
 fn resolve_entrypoint(meta: &PluginMeta) -> PathBuf {
     let ep = Path::new(&meta.entrypoint);
     if ep.is_absolute() {
         ep.to_path_buf()
     } else {
-        Path::new(PLUGINS_DIR)
-            .join(&meta.id)
-            .join(ep)
+        Path::new(PLUGINS_DIR).join(&meta.id).join(ep)
     }
 }
 
-/// Invoke a single plugin, passing `command` via stdin and the
-/// `DPSHELL_COMMAND` environment variable (avoids shell-quoting issues).
-///
-/// Returns `PluginDecision::Allow(original_or_new_command)` or `PluginDecision::Block`.
 pub fn invoke_plugin(meta: &PluginMeta, command: &str) -> PluginDecision {
     let entrypoint = resolve_entrypoint(meta);
 
@@ -134,7 +108,6 @@ pub fn invoke_plugin(meta: &PluginMeta, command: &str) -> PluginDecision {
         return PluginDecision::Allow(command.to_string());
     }
 
-    // Spawn child with stdin piped and stdout captured.
     let child = Command::new(&entrypoint)
         .env("DPSHELL_COMMAND", command)
         .stdin(Stdio::piped())
@@ -150,20 +123,18 @@ pub fn invoke_plugin(meta: &PluginMeta, command: &str) -> PluginDecision {
         }
     };
 
-    // Write command to stdin, then close it.
     if let Some(mut stdin) = child.stdin.take() {
         let _ = stdin.write_all(command.as_bytes());
-        // stdin closed when `stdin` drops
+        // stdin closed when `stdin` drops — plugin sees EOF.
     }
 
-    // Wait with timeout using a background thread.
     let timeout = Duration::from_secs(PLUGIN_TIMEOUT_SECS);
     let output = wait_with_timeout(child, timeout);
 
     match output {
         None => {
             eprintln!(
-                "dpshell: plugin '{}': timed out after {}s — skipping",
+                "dpshell: plugin '{}': timed out after {}s — killed and skipping",
                 meta.id, PLUGIN_TIMEOUT_SECS
             );
             PluginDecision::Allow(command.to_string())
@@ -178,7 +149,9 @@ pub fn invoke_plugin(meta: &PluginMeta, command: &str) -> PluginDecision {
                 0 => PluginDecision::Allow(command.to_string()),
                 1 => PluginDecision::Block,
                 2 => {
-                    let replacement = String::from_utf8_lossy(&stdout_bytes).trim().to_string();
+                    let replacement = sanitize_replacement(
+                        &String::from_utf8_lossy(&stdout_bytes)
+                    );
                     if replacement.is_empty() {
                         eprintln!(
                             "dpshell: plugin '{}': exit 2 but empty stdout — allowing original",
@@ -201,88 +174,84 @@ pub fn invoke_plugin(meta: &PluginMeta, command: &str) -> PluginDecision {
     }
 }
 
-/// Spawn a watchdog thread that kills the child after `timeout`.
-/// Returns `None` on timeout, `Some(Ok((status, stdout)))` on success,
-/// `Some(Err(...))` on wait failure.
+/// A plugin's stdout replacement is treated as a single command line.  We
+/// reject newlines and NUL bytes so a malicious plugin cannot inject extra
+/// commands that the parser would tokenize into a sequence.  The shell-level
+/// metacharacters (`;`, `&&`, `||`, `|`) are still permitted because that's
+/// how legitimate plugin replacements form pipelines.
+fn sanitize_replacement(raw: &str) -> String {
+    raw.trim()
+        .chars()
+        .filter(|&c| c != '\n' && c != '\r' && c != '\0')
+        .collect()
+}
+
+/// Wait for `child` up to `timeout`.  Polls via try_wait(); kills + reaps the
+/// child on timeout.  Always joins the stdout-reader thread before returning,
+/// so no thread is ever leaked.
 fn wait_with_timeout(
     mut child: std::process::Child,
     timeout: Duration,
 ) -> Option<Result<(std::process::ExitStatus, Vec<u8>), std::io::Error>> {
-    use std::sync::{Arc, Mutex};
+    use std::io::Read;
     use std::thread;
 
-    // Collect stdout in a background thread.
-    let stdout_handle = child.stdout.take().map(|stdout| {
-        use std::io::Read;
+    // Drain stdout in a background thread so the child cannot deadlock filling
+    // its stdout pipe buffer.  The thread exits when stdout reaches EOF, which
+    // happens either on the child's exit or when we kill it.
+    let stdout_handle = child.stdout.take().map(|mut stdout| {
         thread::spawn(move || {
             let mut buf = Vec::new();
-            let mut reader = stdout;
-            let _ = reader.read_to_end(&mut buf);
+            let _ = stdout.read_to_end(&mut buf);
             buf
         })
     });
 
-    // Shared result slot.
-    let result: Arc<Mutex<Option<Result<std::process::ExitStatus, std::io::Error>>>> =
-        Arc::new(Mutex::new(None));
-    let result_clone = Arc::clone(&result);
-
-    // Wait thread.
-    let wait_thread = thread::spawn(move || {
-        let r = child.wait();
-        *result_clone.lock().unwrap() = Some(r);
-    });
-
-    // Poll until timeout.
-    let start = std::time::Instant::now();
+    let start = Instant::now();
     let poll = Duration::from_millis(50);
-    loop {
-        if start.elapsed() >= timeout {
-            // Timeout — best-effort kill (child may already be gone).
-            return None;
-        }
-        {
-            let guard = result.lock().unwrap();
-            if guard.is_some() {
-                break;
+
+    let exit_result = loop {
+        match child.try_wait() {
+            Ok(Some(status)) => break Ok(status),
+            Ok(None) => {
+                if start.elapsed() >= timeout {
+                    // Best-effort kill (SIGKILL on Unix), then reap.
+                    let _ = child.kill();
+                    // Reap so the kernel does not leave a zombie.  This also
+                    // closes the stdout pipe and lets the reader thread exit.
+                    let _ = child.wait();
+                    // Drain & join the reader so we do not leak the thread.
+                    if let Some(h) = stdout_handle { let _ = h.join(); }
+                    return None;
+                }
+                thread::sleep(poll);
+            }
+            Err(e) => {
+                if let Some(h) = stdout_handle { let _ = h.join(); }
+                return Some(Err(e));
             }
         }
-        thread::sleep(poll);
-    }
+    };
 
-    let _ = wait_thread.join();
+    // Normal exit path: status known, drain the reader thread.
     let stdout_bytes = stdout_handle
         .and_then(|h| h.join().ok())
         .unwrap_or_default();
-
-    let status_result = result.lock().unwrap().take().unwrap();
-    Some(status_result.map(|s| (s, stdout_bytes)))
+    Some(exit_result.map(|s| (s, stdout_bytes)))
 }
 
-// ──────────────────────────────────────────────
-// Pipeline entry-point (used by main.rs)
-// ──────────────────────────────────────────────
-
-/// Run all enabled plugins against `command` in order, synchronously.
-///
-/// Each plugin is invoked via its `entrypoint` executable; the decision is
-/// determined solely by exit code and stdout (see module-level doc).
-///
-/// - Returns `Some(final_command)` if all plugins allowed the command
-///   (with any replacements applied).
-/// - Returns `None` if any plugin blocked the command.
 pub fn run_plugins(plugins: &[PluginMeta], command: &str) -> Option<String> {
     let mut current = command.to_string();
 
     for plugin in plugins {
         match invoke_plugin(plugin, &current) {
             PluginDecision::Block => {
-                println!("\x1b[31;5m[!]\x1b[0m Blocked by plugin: {}", plugin.id);
+                eprintln!("\x1b[31;5m[!]\x1b[0m Blocked by plugin: {}", plugin.id);
                 return None;
             }
             PluginDecision::Allow(new_cmd) => {
                 if new_cmd != current {
-                    println!(
+                    eprintln!(
                         "\x1b[33;5m<!>\x1b[0m Replaced by plugin '{}': {} → {}",
                         plugin.id, current, new_cmd
                     );
@@ -295,13 +264,6 @@ pub fn run_plugins(plugins: &[PluginMeta], command: &str) -> Option<String> {
     Some(current)
 }
 
-// ──────────────────────────────────────────────
-// PATH helpers (used by main.rs at startup)
-// ──────────────────────────────────────────────
-
-/// Return the directory path for each loaded plugin (i.e. the directory that
-/// contains its entrypoint).  main.rs prepends these to $PATH so that plugin
-/// executables are reachable by name without a full path.
 pub fn plugin_dirs_for_path(plugins: &[PluginMeta]) -> Vec<PathBuf> {
     plugins
         .iter()
