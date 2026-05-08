@@ -56,6 +56,72 @@ const STDOUT_FD: RawFd = 1;
 /// In `disable`/`permissive` modes, set `enforce = false` — the post-expansion
 /// audit short-circuits immediately and never blocks anything.
 /// In `enforcing` mode, populate `protected_paths` and `allowlist` from config.
+
+// ── Fork-bomb rate limiter (thread-local, single-threaded shell) ──────────────
+use std::cell::Cell;
+use std::time::Instant;
+
+thread_local! {
+    /// Timestamp of the start of the current 1-second window.
+    static BG_WINDOW_START: Cell<Option<Instant>> = Cell::new(None);
+    /// Number of background forks in the current window.
+    static BG_FORKS_THIS_WINDOW: Cell<u32> = Cell::new(0);
+    /// Total live background children.
+    static BG_CHILD_COUNT: Cell<u32> = Cell::new(0);
+}
+
+/// Returns `true` if we are under the fork rate / child-count limits and
+/// records the fork.  Returns `false` if any limit would be exceeded.
+fn bg_fork_allowed() -> bool {
+    let now = Instant::now();
+
+    // Reset window counter if the 1-second window has elapsed.
+    let window_elapsed = BG_WINDOW_START.with(|s| {
+        match s.get() {
+            Some(start) => now.duration_since(start).as_secs() >= 1,
+            None        => true,
+        }
+    });
+    if window_elapsed {
+        BG_WINDOW_START.with(|s| s.set(Some(now)));
+        BG_FORKS_THIS_WINDOW.with(|c| c.set(0));
+    }
+
+    let rate_ok  = BG_FORKS_THIS_WINDOW.with(|c| c.get() < BG_FORK_RATE_LIMIT);
+    let count_ok = BG_CHILD_COUNT.with(|c| c.get() < BG_CHILD_LIMIT);
+
+    if rate_ok && count_ok {
+        BG_FORKS_THIS_WINDOW.with(|c| c.set(c.get() + 1));
+        BG_CHILD_COUNT.with(|c| c.set(c.get() + 1));
+        true
+    } else {
+        false
+    }
+}
+
+/// Call when a background child is reaped.
+#[allow(dead_code)]
+pub fn bg_child_reaped() {
+    BG_CHILD_COUNT.with(|c| c.set(c.get().saturating_sub(1)));
+}
+
+/// Hard limits — tuned conservatively so the shell survives a fork bomb
+/// while still allowing normal interactive use.
+///
+/// CALL_DEPTH_LIMIT: maximum number of recursive shell-function activations.
+/// A depth of 32 lets legitimate scripts nest comfortably while stopping an
+/// infinite `:() { : }; :` after 32 frames instead of blowing the stack.
+pub const CALL_DEPTH_LIMIT: u32 = 128;
+
+/// Maximum background forks per second.  A fork bomb like `:|:&` creates
+/// O(2^n) children per second; 64/s blocks the geometric growth immediately
+/// while still allowing realistic background workloads.
+pub const BG_FORK_RATE_LIMIT: u32 = 64;
+
+/// Absolute cap on live background children.  Once hit, every `&` returns
+/// an error until children exit.
+pub const BG_CHILD_LIMIT: u32 = 256;
+
 pub struct ExecContext<'a> {
     pub protected_paths: &'a [String],
     pub allowlist:       &'a [String],
@@ -63,16 +129,24 @@ pub struct ExecContext<'a> {
     pub password_hash:   &'a str,
     /// When `false` the post-expansion audit is skipped entirely.
     pub enforce:         bool,
+    /// Shell function table: name → body AST node.
+    pub functions: &'a std::cell::RefCell<std::collections::HashMap<String, CommandNode>>,
+    /// Current shell-function call depth (incremented on each function call).
+    pub call_depth: u32,
 }
 
 impl<'a> ExecContext<'a> {
     /// Convenience: a no-op context that never blocks (disable/permissive).
-    pub fn permissive() -> Self {
+    pub fn permissive_with_fns(
+        functions: &'a std::cell::RefCell<std::collections::HashMap<String, CommandNode>>,
+    ) -> Self {
         Self {
             protected_paths: &[],
             allowlist:       &[],
             password_hash:   "",
             enforce:         false,
+            functions,
+            call_depth: 0,
         }
     }
 }
@@ -84,7 +158,32 @@ impl<'a> ExecContext<'a> {
 /// Execute a `CommandNode` tree.  Returns the exit code of the last command.
 pub fn execute_node(node: &CommandNode, jobs: &mut JobManager, ctx: &ExecContext) -> i32 {
     match node {
-        CommandNode::Simple(sc)     => execute_simple(sc, jobs, ctx),
+        CommandNode::Simple(sc)     => {
+            // Check if this resolves to a shell function.
+            if let Some(body) = ctx.functions.borrow().get(sc.name()).cloned() {
+                if ctx.call_depth >= CALL_DEPTH_LIMIT {
+                    eprintln!(
+                        "dpshell: {}: maximum function call depth ({}) exceeded — aborting",
+                        sc.name(), CALL_DEPTH_LIMIT
+                    );
+                    return 1;
+                }
+                // Build a new context with incremented depth; all other fields shared.
+                let deeper = ExecContext {
+                    call_depth: ctx.call_depth + 1,
+                    functions:  ctx.functions,
+                    protected_paths: ctx.protected_paths,
+                    allowlist:       ctx.allowlist,
+                    password_hash:   ctx.password_hash,
+                    enforce:         ctx.enforce,
+                };
+                return execute_node(&body, jobs, &deeper);
+            }
+            if sc.is_builtin {
+                return dispatch_builtin(sc);
+            }
+            execute_simple(sc, jobs, ctx)
+        }
         CommandNode::Pipeline(cmds) => execute_pipeline(cmds, jobs, ctx),
         CommandNode::Logical { left, op, right } => {
             let left_code = execute_node(left, jobs, ctx);
@@ -95,6 +194,94 @@ pub fn execute_node(node: &CommandNode, jobs: &mut JobManager, ctx: &ExecContext
             };
             if run_right { execute_node(right, jobs, ctx) } else { left_code }
         }
+        // Background: fork a child that runs the inner node, don't wait.
+        CommandNode::Background(inner) => {
+            execute_background(inner, jobs, ctx)
+        }
+        // Compound: execute each node in sequence.
+        CommandNode::Compound(nodes) => {
+            let mut last = 0;
+            for n in nodes { last = execute_node(n, jobs, ctx); }
+            last
+        }
+        CommandNode::FunctionDef { name, body } => {
+            ctx.functions.borrow_mut().insert(name.clone(), (**body).clone());
+            0
+        }
+    }
+}
+
+fn dispatch_builtin(sc: &SimpleCommand) -> i32 {
+    match sc.name() {
+        ":" => 0,
+        "cd" => {
+            match crate::cd::execute_cd(&sc.args().to_vec()) {
+                Ok(code) => code,
+                Err(e) => { eprintln!("dpshell: cd: {}", e); 1 }
+            }
+        }
+        "test" | "[" => crate::builtins::builtin_test(sc.args()),
+        "kill" => crate::builtins::builtin_kill(sc.args()),
+        "umask" => crate::builtins::builtin_umask(sc.args()),
+        "wait" => { crate::builtins::builtin_wait(sc.args()); 0 }
+        "break" => { crate::builtins::builtin_break(sc.args()); 0 }
+        "continue" => { crate::builtins::builtin_continue(sc.args()); 0 }
+        "shift" => { crate::builtins::builtin_shift(sc.args()); 0 }
+        name => {
+            eprintln!("dpshell: {}: builtin not supported in this context", name);
+            1
+        }
+    }
+}
+
+/// Fork and execute `inner` in the background (no wait, no terminal transfer).
+fn execute_background(inner: &CommandNode, jobs: &mut JobManager, ctx: &ExecContext) -> i32 {
+    use nix::unistd::{fork, ForkResult};
+
+    // ── Fork-bomb protection: check rate and child count before forking ───────
+    if !bg_fork_allowed() {
+        eprintln!(
+            "dpshell: background fork limit reached ({}/s or {} children) — try again later",
+            BG_FORK_RATE_LIMIT, BG_CHILD_LIMIT
+        );
+        return 1;
+    }
+
+    let _shell_pgid = unsafe { libc::getpgrp() };
+
+    match unsafe { fork() } {
+        Ok(ForkResult::Child) => {
+            // Child: new process group, no terminal ownership, run inner.
+            let _ = nix::unistd::setpgid(Pid::from_raw(0), Pid::from_raw(0));
+            // Ignore SIGTTIN/SIGTTOU so background reads block gracefully.
+            unsafe {
+                let _ = nix::sys::signal::signal(
+                    nix::sys::signal::Signal::SIGTTIN,
+                    nix::sys::signal::SigHandler::SigIgn,
+                );
+                let _ = nix::sys::signal::signal(
+                    nix::sys::signal::Signal::SIGTTOU,
+                    nix::sys::signal::SigHandler::SigIgn,
+                );
+            }
+            let mut dummy_jobs = crate::jobs::JobManager::new(Pid::from_raw(unsafe { libc::getpgrp() }));
+            let _ = execute_node(inner, &mut dummy_jobs, ctx);
+            std::process::exit(0);
+        }
+        Ok(ForkResult::Parent { child }) => {
+            let _ = nix::unistd::setpgid(child, child);
+            // Build a display string for the job table.
+            let display = match inner {
+                CommandNode::Simple(sc) => format!("{} &", sc.raw),
+                CommandNode::Pipeline(cmds) => format!("{} &",
+                    cmds.iter().map(|c| c.raw.as_str()).collect::<Vec<_>>().join(" | ")),
+                _ => "<compound> &".to_string(),
+            };
+            let job_id = jobs.add(child, &display, crate::jobs::JobStatus::Background);
+            eprintln!("[{}] {}", job_id, child.as_raw());
+            0
+        }
+        Err(e) => { eprintln!("dpshell: fork (background): {}", e); 1 }
     }
 }
 

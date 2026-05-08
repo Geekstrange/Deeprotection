@@ -1,6 +1,6 @@
 # Deeprotection
 
-Deeprotection is a high-performance security tool written in Rust. It acts as a secure shell wrapper (`dpshell`) that provides command interception, rule-based matching, plugin extensibility, path protection, audit logging, and password authentication. It offers three operation strategies: Enforcing, Permissive, and Disable modes.
+Deeprotection is a high-performance, fully-featured shell environment (`dpshell`) written in Rust. It provides its own command parser, pipeline executor, job control, and a rich set of built-in commands — all without invoking `/bin/sh`. On top of this shell, it layers rule-based matching, plugin extensibility, path protection, audit logging, and password authentication. It offers three operation strategies: Enforcing, Permissive, and Disable modes.
 
 <p align="center">
   <a href="https://github.com/Geekstrange/Deeprotection">
@@ -40,13 +40,21 @@ Deeprotection is a high-performance security tool written in Rust. It acts as a 
 
 ### 🕹Basic Usage
 
-**First Launch & Context**
+**A Modern Shell Experience**
 
-Deeprotection runs as a custom shell environment called `dpshell`. It handles commands natively, logging activity and applying your security rules before executing them via the system's standard shell.
+`dpshell` offers a native shell with real-time syntax highlighting, grey‑text autosuggestions from history, and smart tab completion (fuzzy matching). These fish‑style features are enabled by default and can be toggled in the configuration file (see `[features]`).
+
+Inside the shell you can run pipelines, chain commands with `;`, `&&`, `||`, send jobs to the background with `&`, and define shell functions. All parsing and execution is done directly by `dpshell`, so security rules apply uniformly.
+
+**Interactive History & Completion**
+
+- **Syntax highlighting** – commands, builtins, strings, operators, and comments are colour‑coded as you type.
+- **Autosuggestions** – a grey ghost text from history appears; press `Right` or `Ctrl+F` to accept.
+- **Tab completion** – press `Tab` to complete command names (built‑ins and PATH binaries) and file paths with fuzzy matching.
 
 **Enhanced `cd` Command**
 
-In `dpshell`, the `cd` command comes with interactive built-ins to make terminal navigation cleaner and faster.
+In `dpshell`, the `cd` command comes with interactive built‑ins to make terminal navigation cleaner and faster.
 
 **Interactive Single-Level Navigation:** Entering `cd ?` allows you to view numbered subdirectories and input a number to enter the corresponding directory.
 
@@ -90,7 +98,7 @@ Commands are evaluated against your defined `[[rules]]` and any active plugins. 
 
 **Enforcing Mode**
 
-Strict security. Commands are evaluated against rules, plugins, and finally, the path protection engine. Operations involving commands in the `allowlist` targeting protected directories will require password authentication. Commands not in the `allowlist` will be blocked immediately.
+Strict security. Commands are evaluated against rules, plugins, and finally, the path protection engine (including a post‑glob expansion audit). Operations involving commands in the `allowlist` targeting protected directories will require password authentication. Commands not in the `allowlist` will be blocked immediately.
 
 ```bash
 dpshell(1)# ls test/
@@ -100,7 +108,7 @@ Admin password:
 
 **Password Authentication**
 
-In `enforcing` mode, when operating on protected paths with allowlisted commands, you will be prompted for password authentication (up to 3 attempts). The password is verified using SHA-256 against the hash stored in the configuration file.
+In `enforcing` mode, when operating on protected paths with allowlisted commands, you will be prompted for password authentication (up to 3 attempts). The password is verified using SHA‑256 against the hash stored in the configuration file.
 
 ### 🛠Configuration File Introduction
 
@@ -122,6 +130,14 @@ protect = ["/root/test", "/root/.ssh"]
 # Commands allowed to operate on protected paths (requires authentication)
 allowlist = ["rm", "rmdir", "mv", "cp", "chmod", "chown", "touch", "cat", "ls"]
 
+# ---------------------Interactive Features---------------------
+
+[features]
+# Enable/disable fish-style interactive helpers (all default to true)
+syntax_highlighting = true
+auto_suggest        = true
+tab_completion      = true
+
 # ---------------------User Rules---------------------
 
 [[rules]]
@@ -141,6 +157,8 @@ enabled = true
 
 - **Plain string**: Automatically converted to an anchored regex that allows flexible whitespace (e.g., `"rm -rf"` becomes `^\s*rm\s+-rf\s*$`).
 - **Explicit regex**: Prefixed with `re:` (e.g., `"re:^echo 111$"`).
+- **Command name match**: `cmd:rm` matches if the command name is `rm`.
+- **Argument regex**: `arg:\.\.` matches if any argument matches the regex.
 
 **Rule Actions:**
 
@@ -234,23 +252,28 @@ You can refer to the architecture design of this project in the [ARCHITECTURE.md
 
 **Key Architecture Highlights:**
 
-- **Modular Design**: Clear separation of concerns with dedicated modules for rules, plugins, path protection, and logging.
-- **Configuration-Driven**: All security policies are defined in TOML configuration files.
-- **Fail-Open Philosophy**: Plugin failures default to allowing the original command with a warning.
-- **Thread-Safe Logging**: Mutex-protected file writes ensure safe concurrent access.
+- **No external shell**: `dpshell` parses and executes commands directly using a custom AST‑based pipeline engine.
+- **Job Control**: Built‑in `fg`, `bg`, `jobs` with full POSIX process‑group management.
+- **Brace & Glob Expansion**: `{1..3}`, `*.log`, etc. performed before execution, with overflow and fork‑bomb protection.
+- **Multi‑layer Security**: Raw input rules → AST‑based rule matching → Plugin pipeline → Path protection (including post‑expansion audit).
+- **Fail‑Closed in Enforcing Mode**: If the working directory cannot be determined, protected‑path checks block the command.
+- **Interactive Features**: Syntax highlighting, history autosuggestions, and fuzzy tab completion powered by `reedline` and `nucleo`.
+- **Configuration‑Driven**: All security policies and feature toggles are defined in TOML configuration files.
+- **Thread‑Safe Logging**: Mutex‑protected file writes ensure safe concurrent access.
 
 **Core Dependencies:**
 
 | Crate        | Purpose                                      |
 | ------------ | -------------------------------------------- |
-| chrono       | Timestamp generation                         |
-| rustyline    | Command-line interface and history           |
+| reedline     | Modern line editor with highlighting, hints, and menus |
+| nucleo       | High‑performance fuzzy matching for completions |
 | regex        | Pattern matching for rules                   |
 | anyhow       | Error handling                               |
 | serde/toml   | Configuration parsing                        |
 | sha2         | Password hash verification                   |
 | rpassword    | Secure password input                        |
-| walkdir      | Directory traversal for plugin discovery     |
+| nix          | Unix system calls (fork, signal, wait)       |
+| glob         | Filename globbing                            |
 
 ## 📃Contributors List
 
@@ -278,7 +301,11 @@ This project is licensed under the Mozilla Public License Version 2.0 (MPL 2.0).
 
 **Rust Toolchain**: For providing the memory-safe and highly performant foundation of the refactored engine.
 
-**Rustyline**: For powering the robust command-line interface, history management, and autocompletion features.
+**Reedline**: For its excellent fish‑style line editor, syntax highlighting, and completions framework.
+
+**Nucleo**: For fast, fuzzy matching that powers the smart tab completion.
+
+**Nix Crate**: For safe, idiomatic bindings to Unix process and signal APIs.
 
 **Regex Crate**: For enabling efficient pattern matching in the rule engine.
 

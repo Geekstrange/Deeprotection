@@ -84,13 +84,33 @@ pub enum CommandNode {
         op:    LogicOp,
         right: Box<CommandNode>,
     },
+    /// A background command: `cmd &`
+    Background(Box<CommandNode>),
+    /// A brace-group compound command: `{ cmd1 ; cmd2 ; }`
+    Compound(Vec<CommandNode>),
+    /// A shell function definition: `name() { body }`
+    FunctionDef {
+        name: String,
+        body: Box<CommandNode>,
+    },
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Built-in registry (kept in sync with parser.rs)
 // ──────────────────────────────────────────────────────────────────────────────
 
-const BUILTINS: &[&str] = &["cd", "exit", "export", "unset", "fg", "bg", "jobs", "history"];
+const BUILTINS: &[&str] = &[
+    // Already dispatched in main.rs / jobs.rs / cd.rs
+    "cd", "exit", "export", "unset", "fg", "bg", "jobs",
+    // All built-ins implemented in builtins.rs
+    ":", "alias", "unalias", "bind",
+    "history", "kill",
+    "readonly", "set", "source", ".",
+    "exec", "eval", "trap", "wait",
+    "break", "continue", "return", "shift", "local", "test", "[",
+    "dirs", "pushd", "popd", "umask",
+    "help", "command", "builtin", "type",
+];
 
 fn is_builtin(name: &str) -> bool {
     BUILTINS.contains(&name)
@@ -124,6 +144,9 @@ enum SToken {
     And,    // &&
     Or,     // ||
     Semi,   // ;
+    Bg,     // &  (background)
+    LBrace, // {
+    RBrace, // }
 }
 
 /// Intermediate segment produced by the character-level pre-scanner.
@@ -137,6 +160,7 @@ enum RawSegment {
 /// Scan `input` outside of any quoted region, splitting on `&&`, `||`, `|`, `;`.
 /// Quoted regions (single-quote, double-quote, backslash) are passed through
 /// verbatim so that `"foo|bar"` is never treated as a pipe.
+#[allow(unused_assignments)]
 fn prescan(input: &str) -> Vec<RawSegment> {
     let mut segments: Vec<RawSegment> = Vec::new();
     let mut current = String::new();
@@ -204,7 +228,33 @@ fn prescan(input: &str) -> Vec<RawSegment> {
             ';' => {
                 flush!(); segments.push(RawSegment::Op(SToken::Semi)); i += 1;
             }
+            // ── Background operator & (must come AFTER the && arm) ────────
+            '&' => {
+                flush!(); segments.push(RawSegment::Op(SToken::Bg)); i += 1;
+            }
 
+            // ── Parentheses: word-break characters ───────────────────────────
+            '(' => {
+                flush!();
+                segments.push(RawSegment::Text("(".to_string()));
+                i += 1;
+            }
+            ')' => {
+                flush!();
+                segments.push(RawSegment::Text(")".to_string()));
+                i += 1;
+            }
+            // ── Braces: compound command delimiters ───────────────────────
+            '{' => {
+                flush!();
+                segments.push(RawSegment::Op(SToken::LBrace));
+                i += 1;
+            }
+            '}' => {
+                flush!();
+                segments.push(RawSegment::Op(SToken::RBrace));
+                i += 1;
+            }
             // ── Ordinary character ────────────────────────────────────────
             c => { current.push(c); i += 1; }
         }
@@ -262,35 +312,133 @@ impl Parser {
 
     // ── Grammar rules (lowest precedence first) ────────────────────────────
 
-    /// logical_expr := pipeline ( (';' | '&&' | '||') pipeline )*
+    /// logical_expr := pipeline ( (';' | '&&' | '||') pipeline )* ['&']
+    ///
+    /// `&` at the end wraps the accumulated left side in `Background`.
+    /// `cmd1 ; cmd2 &` backgrounds only cmd2 (matches bash behaviour).
     fn parse_logical(&mut self) -> Result<CommandNode, ParseError> {
         let mut left = self.parse_pipeline()?;
 
         loop {
-            let op = match self.peek() {
-                Some(SToken::Semi) => LogicOp::Seq,
-                Some(SToken::And)  => LogicOp::And,
-                Some(SToken::Or)   => LogicOp::Or,
-                _                  => break,
-            };
-            self.advance();
-            // Trailing operator with nothing after it — treat as Seq/noop.
-            if self.peek().is_none() {
-                break;
+            match self.peek() {
+                Some(SToken::Bg) => {
+                    // `&` backgrounds the node built so far, then continues
+                    // parsing in case there is a subsequent `;` or `&&`.
+                    self.advance();
+                    left = CommandNode::Background(Box::new(left));
+                    // After `&` there may be more commands (e.g. `:& ; ls`).
+                    if self.peek().is_none() { break; }
+                    // Expect a sequential separator before the next command.
+                    match self.peek() {
+                        Some(SToken::Semi) | Some(SToken::And) | Some(SToken::Or) => {}
+                        _ => break,
+                    }
+                }
+                Some(SToken::Semi) | Some(SToken::And) | Some(SToken::Or) => {
+                    let op = match self.peek() {
+                        Some(SToken::Semi) => LogicOp::Seq,
+                        Some(SToken::And)  => LogicOp::And,
+                        Some(SToken::Or)   => LogicOp::Or,
+                        _ => unreachable!(),
+                    };
+                    self.advance();
+                    if self.peek().is_none() { break; }
+                    let right = self.parse_pipeline()?;
+                    left = CommandNode::Logical {
+                        left: Box::new(left),
+                        op,
+                        right: Box::new(right),
+                    };
+                }
+                _ => break,
             }
-            let right = self.parse_pipeline()?;
-            left = CommandNode::Logical {
-                left: Box::new(left),
-                op,
-                right: Box::new(right),
-            };
         }
 
         Ok(left)
     }
 
-    /// pipeline := simple_cmd ( '|' simple_cmd )*
+
+    /// compound := '{' logical_list '}'
+    ///
+    /// A brace group groups multiple commands into one node.
+    fn parse_compound(&mut self) -> Result<CommandNode, ParseError> {
+        // Consume '{'
+        self.advance();
+        let mut body: Vec<CommandNode> = Vec::new();
+
+        loop {
+            // Skip bare semicolons used as statement terminators inside braces.
+            while self.peek() == Some(&SToken::Semi) {
+                self.advance();
+            }
+            if self.peek() == Some(&SToken::RBrace) || self.peek().is_none() {
+                break;
+            }
+            body.push(self.parse_logical()?);
+        }
+
+        if self.peek() != Some(&SToken::RBrace) {
+            return Err(ParseError::Lex(
+                "syntax error: missing `}' after compound command".to_string(),
+            ));
+        }
+        self.advance(); // consume '}'
+
+        match body.len() {
+            0 => Err(ParseError::Lex("syntax error: empty compound command `{}'".to_string())),
+            1 => Ok(body.remove(0)),
+            _ => Ok(CommandNode::Compound(body)),
+        }
+    }
+
+    /// Try to parse a function definition: `NAME ( ) COMPOUND`
+    ///
+    /// Called when `parse_simple` sees that the first word is followed by
+    /// `(` `)`.  The NAME token has already been consumed into `words[0]`.
+    fn try_parse_funcdef(&mut self, name: String) -> Result<CommandNode, ParseError> {
+        // Consume '(' and ')' — already verified by caller.
+        self.advance(); // '('
+        self.advance(); // ')'
+
+        // Optional whitespace is already handled by token boundaries.
+        // Expect a compound command body `{ ... }`.
+        if self.peek() != Some(&SToken::LBrace) {
+            return Err(ParseError::Lex(format!(
+                "syntax error near `{}': expected `{{' after function definition",
+                name
+            )));
+        }
+        let body = self.parse_compound()?;
+        Ok(CommandNode::FunctionDef {
+            name,
+            body: Box::new(body),
+        })
+    }
+
+    /// pipeline := ( funcdef | compound | simple_cmd ) ( '|' ( simple_cmd ) )*
+    ///
+    /// Function definitions and compound commands can only appear as the
+    /// first (and only) stage of a pipeline — they cannot be piped from/to.
     fn parse_pipeline(&mut self) -> Result<CommandNode, ParseError> {
+        // ── Function definition: WORD '(' ')' '{' ... '}' ────────────────
+        // Pattern: next token is Word(name), then Word("("), then Word(")")
+        // (parentheses are emitted as words by the prescan / segments layer).
+        if let Some(SToken::Word(name)) = self.peek().cloned() {
+            let is_open  = self.tokens.get(self.pos + 1) == Some(&SToken::Word("(".to_string()));
+            let is_close = self.tokens.get(self.pos + 2) == Some(&SToken::Word(")".to_string()));
+            let has_body = self.tokens.get(self.pos + 3) == Some(&SToken::LBrace);
+            if is_open && is_close && has_body {
+                self.advance(); // consume name word
+                return self.try_parse_funcdef(name);
+            }
+        }
+
+        // ── Compound command starting with '{' ────────────────────────────
+        if self.peek() == Some(&SToken::LBrace) {
+            return self.parse_compound();
+        }
+
+        // ── Normal pipeline ───────────────────────────────────────────────
         let mut cmds = vec![self.parse_simple()?];
 
         while self.peek() == Some(&SToken::Pipe) {
@@ -305,7 +453,7 @@ impl Parser {
         }
     }
 
-    /// simple_cmd := WORD+
+    /// simple_cmd := WORD+ | NAME '(' ')' compound
     fn parse_simple(&mut self) -> Result<SimpleCommand, ParseError> {
         let mut words: Vec<String> = Vec::new();
 
@@ -315,6 +463,7 @@ impl Parser {
         }
 
         if words.is_empty() {
+            // Could be a compound command at the start of a pipeline stage.
             return Err(ParseError::Lex(
                 "expected a command, got operator or end of input".to_string(),
             ));
@@ -344,6 +493,7 @@ impl Parser {
         })
     }
 }
+
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Public entry-point
@@ -398,6 +548,9 @@ pub fn flatten_commands(node: &CommandNode) -> Vec<&SimpleCommand> {
             v.extend(flatten_commands(right));
             v
         }
+        CommandNode::Background(inner) => flatten_commands(inner),
+        CommandNode::Compound(nodes)   => nodes.iter().flat_map(flatten_commands).collect(),
+        CommandNode::FunctionDef { body, .. } => flatten_commands(body),
     }
 }
 
@@ -512,4 +665,73 @@ mod tests {
         let node = parse_command_line("ls | cat | cat").unwrap();
         assert_eq!(pipe_len(&node), 3);
     }
+
+    #[test]
+    fn background_operator_parses() {
+        // `:&` must become Background(Simple(:))
+        let node = parse_command_line(":&").unwrap();
+        match node {
+            CommandNode::Background(inner) => match *inner {
+                CommandNode::Simple(sc) => assert_eq!(sc.program, ":"),
+                _ => panic!("expected Simple inside Background"),
+            },
+            _ => panic!("expected Background, got {:?}", node),
+        }
+    }
+
+    #[test]
+    fn pipe_then_background() {
+        // `:|:&` → Background(Pipeline([:, :]))
+        let node = parse_command_line(":|:&").unwrap();
+        match node {
+            CommandNode::Background(inner) => match *inner {
+                CommandNode::Pipeline(cmds) => assert_eq!(cmds.len(), 2),
+                _ => panic!("expected Pipeline inside Background"),
+            },
+            _ => panic!("expected Background, got {:?}", node),
+        }
+    }
+
+    #[test]
+    fn function_def_parses() {
+        // `:() { :|:& }` — the classic fork bomb function definition
+        let node = parse_command_line(":() { :|:& }").unwrap();
+        match node {
+            CommandNode::FunctionDef { name, body } => {
+                assert_eq!(name, ":");
+                match *body {
+                    CommandNode::Background(_) => {}
+                    _ => panic!("expected Background body, got {:?}", body),
+                }
+            }
+            _ => panic!("expected FunctionDef, got {:?}", node),
+        }
+    }
+
+    #[test]
+    fn forkbomb_full_parse() {
+        // `:() { :|:& };:` — define and immediately invoke
+        let node = parse_command_line(":() { :|:& };:").unwrap();
+        match node {
+            CommandNode::Logical { op: LogicOp::Seq, left, right } => {
+                assert!(matches!(*left, CommandNode::FunctionDef { .. }));
+                // right is the invocation `:`
+                match *right {
+                    CommandNode::Simple(sc) => assert_eq!(sc.program, ":"),
+                    _ => panic!("expected Simple invocation"),
+                }
+            }
+            _ => panic!("expected Logical Seq, got {:?}", node),
+        }
+    }
+
+    #[test]
+    fn compound_command_parses() {
+        let node = parse_command_line("{ echo a ; echo b }").unwrap();
+        match node {
+            CommandNode::Compound(cmds) => assert_eq!(cmds.len(), 2),
+            _ => panic!("expected Compound"),
+        }
+    }
+
 }

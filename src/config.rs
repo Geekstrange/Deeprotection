@@ -12,6 +12,43 @@ pub struct Config {
     pub paths: PathsConfig,
     #[serde(default)]
     pub rules: Vec<Rule>,
+    /// [features] section — interactive feature toggles.
+    #[serde(default)]
+    pub features: FeaturesConfig,
+}
+
+/// [features] section
+///
+/// Example config.toml:
+/// ```toml
+/// [features]
+/// syntax_highlighting = true
+/// auto_suggest        = false
+/// tab_completion      = true
+/// ```
+#[derive(Debug, Deserialize)]
+pub struct FeaturesConfig {
+    /// Real-time syntax colouring as the user types.
+    #[serde(default = "default_true")]
+    pub syntax_highlighting: bool,
+    /// Grey ghost-text autosuggestions from history.
+    #[serde(default = "default_true")]
+    pub auto_suggest: bool,
+    /// Tab-triggered smart completion with fuzzy matching.
+    #[serde(default = "default_true")]
+    pub tab_completion: bool,
+}
+
+fn default_true() -> bool { true }
+
+impl Default for FeaturesConfig {
+    fn default() -> Self {
+        Self {
+            syntax_highlighting: true,
+            auto_suggest:        true,
+            tab_completion:      true,
+        }
+    }
 }
 
 /// [core] section

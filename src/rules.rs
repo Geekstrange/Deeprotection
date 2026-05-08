@@ -206,7 +206,44 @@ pub fn apply_rules_to_node(
                 right: Box::new(new_right),
             })
         }
+        CommandNode::Background(inner) => {
+            let new_inner = apply_rules_to_node(*inner, rules)?;
+            Some(CommandNode::Background(Box::new(new_inner)))
+        }
+        CommandNode::Compound(nodes) => {
+            let mut new_nodes = Vec::new();
+            for n in nodes {
+                new_nodes.push(apply_rules_to_node(n, rules)?);
+            }
+            Some(CommandNode::Compound(new_nodes))
+        }
+        CommandNode::FunctionDef { name, body } => {
+            let new_body = apply_rules_to_node(*body, rules)?;
+            Some(CommandNode::FunctionDef { name, body: Box::new(new_body) })
+        }
     }
+}
+
+/// Pre-AST raw-input rule check.  Tests `RawRegex` rules against the full
+/// input line before the AST is walked.  This catches structural patterns
+/// (e.g. fork bombs) that span the entire command and are invisible to the
+/// per-SimpleCommand matching in `apply_rules_to_node`.
+///
+/// Returns `None` if a blocking rule matched (command should be rejected).
+/// Returns `Some(())` if all rules pass.
+pub fn check_raw_input(raw_input: &str, rules: &[CompiledRule]) -> Option<()> {
+    for rule in rules {
+        if let RuleMatcher::RawRegex(ref re) = rule.matcher {
+            if re.is_match(raw_input) {
+                if let RuleAction::Block = rule.action {
+                    eprintln!("{RED_BLINK}[!]{RESET} Blocked by rule '{}': {}",
+                        rule.name, raw_input);
+                    return None;
+                }
+            }
+        }
+    }
+    Some(())
 }
 
 #[cfg(test)]
@@ -217,16 +254,43 @@ mod tests {
     fn whitespace_flexibility_works() {
         let re_str = simple_to_regex("rm -rf");
         let re = Regex::new(&re_str).unwrap();
-        // Single space (the original case): must still match.
         assert!(re.is_match("rm -rf"));
-        // Multiple spaces (regression): must also match.
         assert!(re.is_match("rm  -rf"));
         assert!(re.is_match("rm   -rf"));
-        // Tab: must also match (it is whitespace).
         assert!(re.is_match("rm\t-rf"));
-        // Leading/trailing whitespace: must match.
         assert!(re.is_match("  rm -rf  "));
-        // Different command: must not match.
         assert!(!re.is_match("rmdir -rf"));
+    }
+
+    #[test]
+    fn check_raw_input_blocks_forkbomb() {
+        let rule = compile_rule(&crate::config::Rule {
+            name: "block_forkbomb".to_string(),
+            pattern: r"re:^\s*:\s*\(\s*\)\s*\{[^}]*\|[^}]*&[^}]*\}\s*;\s*:".to_string(),
+            action: crate::config::Action { block: Some(true), replace: None },
+            enabled: true,
+        }).unwrap();
+        let rules = vec![rule];
+
+        assert!(check_raw_input(": () { :|:& };:", &rules).is_none());
+        assert!(check_raw_input(":() { :|:& };:", &rules).is_none());
+        assert!(check_raw_input(":(){:|:&};:", &rules).is_none());
+        assert!(check_raw_input("  :  ()  { : | : & } ; :", &rules).is_none());
+    }
+
+    #[test]
+    fn check_raw_input_allows_normal_commands() {
+        let rule = compile_rule(&crate::config::Rule {
+            name: "block_forkbomb".to_string(),
+            pattern: r"re:^\s*:\s*\(\s*\)\s*\{[^}]*\|[^}]*&[^}]*\}\s*;\s*:".to_string(),
+            action: crate::config::Action { block: Some(true), replace: None },
+            enabled: true,
+        }).unwrap();
+        let rules = vec![rule];
+
+        assert!(check_raw_input("ls -la", &rules).is_some());
+        assert!(check_raw_input("sleep 10 &", &rules).is_some());
+        assert!(check_raw_input("echo hello | cat", &rules).is_some());
+        assert!(check_raw_input("func() { ls; }", &rules).is_some());
     }
 }
