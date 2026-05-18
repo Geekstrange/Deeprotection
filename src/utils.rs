@@ -28,8 +28,8 @@ pub fn get_current_working_dir() -> PathBuf {
 pub fn start_animation(mode: &str) {
     let color = match mode {
         "permissive" => "\x1b[32m",
-        "enforcing"  => "\x1b[31m",
-        _            => "",
+        "enforcing" => "\x1b[31m",
+        _ => "",
     };
 
     let str_text = "dpshell>";
