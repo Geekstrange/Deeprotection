@@ -29,7 +29,9 @@ fn default_mode() -> String {
 /// [auth] section
 #[derive(Debug, Deserialize, Default)]
 pub struct AuthConfig {
-    /// SHA-256 hex digest of the admin password (generated via `echo -n "pass" | sha256sum`)
+    /// Admin password hash in `salt$iterations$digest` format (hex salt,
+    /// iterated SHA-256).  Generate with `dpshell --hash-password`.
+    /// Legacy bare SHA-256 is accepted with a warning; empty disables auth.
     #[serde(default)]
     pub password_hash: String,
 }

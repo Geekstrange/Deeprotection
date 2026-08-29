@@ -69,11 +69,17 @@ pub struct JsonLinesWriter {
 impl JsonLinesWriter {
     /// Open (or create) the log file in append mode.
     /// Log file name: audit.log in the program's working directory.
+    /// The file is created with 0600 (or tightened to 0600 if a pre-existing
+    /// file has looser permissions) so command lines — which may contain
+    /// secrets — are not world-readable.
     pub fn new(path: &str) -> std::io::Result<Self> {
+        use std::os::unix::fs::{OpenOptionsExt, PermissionsExt};
         let file = OpenOptions::new()
             .create(true)
             .append(true)
+            .mode(0o600)
             .open(path)?;
+        let _ = std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o600));
         let writer = LineWriter::new(file);
         Ok(Self {
             writer: Mutex::new(writer),

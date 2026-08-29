@@ -14,6 +14,18 @@ const MSG_CURRENT_DIRECTORY: &str = "Current directory";
 const MSG_AT_ROOTDIRECTORY: &str = "Already at root directory";
 const ERR_INVALID_SELECTION: &str = "Invalid selection";
 
+/// Expand a leading `~` / `~/...` to $HOME (bash-compatible behaviour).
+fn expand_tilde(path: &str) -> String {
+    let home = env::var("HOME").unwrap_or_else(|_| "/".to_string());
+    if path == "~" {
+        home
+    } else if let Some(rest) = path.strip_prefix("~/") {
+        format!("{}/{}", home.trim_end_matches('/'), rest)
+    } else {
+        path.to_string()
+    }
+}
+
 /// Entry point for the built-in `cd` command.
 ///
 /// Supported forms:
@@ -32,7 +44,7 @@ pub fn execute_cd(args: &[String]) -> Result<i32, Box<dyn std::error::Error>> {
             "?" => handle_cd_interactive(),
             "??" => handle_cd_recursive(),
             path => {
-                env::set_current_dir(path)?;
+                env::set_current_dir(expand_tilde(path))?;
                 println!("{}", env::current_dir()?.display());
                 Ok(0)
             }

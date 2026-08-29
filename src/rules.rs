@@ -72,9 +72,10 @@ pub fn compile_rule(rule: &Rule) -> Option<CompiledRule> {
 /// operands (filenames, paths, etc.) are carried over.
 ///
 /// Examples with pattern `re:rm\s*` and replacement `rm -iv`:
-///   `rm abc`    → matched `rm `, suffix `abc`   → `rm -iv abc`
-///   `rm -f abc` → matched `rm -f`, suffix `abc` → `rm -iv abc`
-///   `rm`        → matched `rm`,   suffix ``     → `rm -iv`
+///   `rm abc`    → matched `rm `, suffix `abc`    → `rm -iv abc`
+///   `rm -f abc` → matched `rm `, suffix `-f abc` → `rm -iv -f abc` (flags are
+///                 part of the suffix: `\s*` only consumes whitespace)
+///   `rm`        → matched `rm`,   suffix ``      → `rm -iv`
 ///
 /// Returns:
 /// - `Some(cmd)` — either the original command (no match) or the final

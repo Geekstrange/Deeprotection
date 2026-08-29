@@ -40,18 +40,19 @@ pub fn start_animation(mode: &str) {
     };
     let len = str_text.len();
 
-    // Hide cursor
-    print!("\x1b[?25l");
-    io::stdout().flush().unwrap();
+    // Hide cursor (ignore write errors — stdout may be closed or piped).
+    let _ = write!(io::stdout(), "\x1b[?25l");
+    let _ = io::stdout().flush();
 
     for i in 0..=(cols.saturating_sub(len)) {
-        print!("\r{:width$}{}", "", str_text, width = i);
-        io::stdout().flush().unwrap();
+        let _ = write!(io::stdout(), "\r{:width$}{}", "", str_text, width = i);
+        let _ = io::stdout().flush();
         thread::sleep(Duration::from_millis(1));
     }
 
     // Final position: right-aligned, mode-driven color, then reset
-    print!(
+    let _ = write!(
+        io::stdout(),
         "\r{}{:width$}{}\x1b[0m\n",
         color,
         "",
@@ -59,8 +60,8 @@ pub fn start_animation(mode: &str) {
         width = cols.saturating_sub(len)
     );
     // Restore cursor
-    print!("\x1b[?25h");
-    io::stdout().flush().unwrap();
+    let _ = write!(io::stdout(), "\x1b[?25h");
+    let _ = io::stdout().flush();
 }
 
 /// Build the shell prompt string.

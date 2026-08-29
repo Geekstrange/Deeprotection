@@ -13,8 +13,10 @@
 //
 // Timeout: each plugin invocation is limited to PLUGIN_TIMEOUT_SECS seconds.
 
+use libc;
 use serde::Deserialize;
 use std::fs;
+use std::os::unix::process::CommandExt;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
@@ -118,6 +120,16 @@ fn resolve_entrypoint(meta: &PluginMeta) -> PathBuf {
     }
 }
 
+/// Strip control characters that would break command boundaries or confuse
+/// downstream processing (newline, carriage return, NUL) from a plugin
+/// replacement command.
+fn sanitize_replacement(raw: &str) -> String {
+    raw.trim()
+        .chars()
+        .filter(|&c| c != '\n' && c != '\r' && c != '\0')
+        .collect()
+}
+
 /// Invoke a single plugin, passing `command` via stdin and the
 /// `DPSHELL_COMMAND` environment variable (avoids shell-quoting issues).
 ///
@@ -134,9 +146,13 @@ pub fn invoke_plugin(meta: &PluginMeta, command: &str) -> PluginDecision {
         return PluginDecision::Allow(command.to_string());
     }
 
-    // Spawn child with stdin piped and stdout captured.
+    // Spawn child with stdin piped and stdout captured.  The plugin gets its
+    // own process group so a timeout can kill the whole group (SIGKILL to
+    // -pgid) — otherwise a plugin that forks children would leave them
+    // running with stdout open, blocking the reader-thread join below.
     let child = Command::new(&entrypoint)
         .env("DPSHELL_COMMAND", command)
+        .process_group(0)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::inherit())
@@ -178,7 +194,7 @@ pub fn invoke_plugin(meta: &PluginMeta, command: &str) -> PluginDecision {
                 0 => PluginDecision::Allow(command.to_string()),
                 1 => PluginDecision::Block,
                 2 => {
-                    let replacement = String::from_utf8_lossy(&stdout_bytes).trim().to_string();
+                    let replacement = sanitize_replacement(&String::from_utf8_lossy(&stdout_bytes));
                     if replacement.is_empty() {
                         eprintln!(
                             "dpshell: plugin '{}': exit 2 but empty stdout — allowing original",
@@ -201,62 +217,67 @@ pub fn invoke_plugin(meta: &PluginMeta, command: &str) -> PluginDecision {
     }
 }
 
-/// Spawn a watchdog thread that kills the child after `timeout`.
+/// Wait for `child` up to `timeout`.  Polls via `try_wait`; kills + reaps the
+/// child on timeout.  Always joins the stdout-reader thread before returning,
+/// so no thread is ever leaked.
 /// Returns `None` on timeout, `Some(Ok((status, stdout)))` on success,
 /// `Some(Err(...))` on wait failure.
 fn wait_with_timeout(
     mut child: std::process::Child,
     timeout: Duration,
 ) -> Option<Result<(std::process::ExitStatus, Vec<u8>), std::io::Error>> {
-    use std::sync::{Arc, Mutex};
+    use std::io::Read;
     use std::thread;
 
-    // Collect stdout in a background thread.
-    let stdout_handle = child.stdout.take().map(|stdout| {
-        use std::io::Read;
+    // Drain stdout in a background thread so the child cannot deadlock filling
+    // its stdout pipe buffer.  The thread exits when stdout reaches EOF, which
+    // happens either on the child's exit or when we kill it.
+    let stdout_handle = child.stdout.take().map(|mut stdout| {
         thread::spawn(move || {
             let mut buf = Vec::new();
-            let mut reader = stdout;
-            let _ = reader.read_to_end(&mut buf);
+            let _ = stdout.read_to_end(&mut buf);
             buf
         })
     });
 
-    // Shared result slot.
-    let result: Arc<Mutex<Option<Result<std::process::ExitStatus, std::io::Error>>>> =
-        Arc::new(Mutex::new(None));
-    let result_clone = Arc::clone(&result);
-
-    // Wait thread.
-    let wait_thread = thread::spawn(move || {
-        let r = child.wait();
-        *result_clone.lock().unwrap() = Some(r);
-    });
-
-    // Poll until timeout.
     let start = std::time::Instant::now();
     let poll = Duration::from_millis(50);
-    loop {
-        if start.elapsed() >= timeout {
-            // Timeout — best-effort kill (child may already be gone).
-            return None;
-        }
-        {
-            let guard = result.lock().unwrap();
-            if guard.is_some() {
-                break;
+
+    let exit_result = loop {
+        match child.try_wait() {
+            Ok(Some(status)) => break Ok(status),
+            Ok(None) => {
+                if start.elapsed() >= timeout {
+                    // Kill the plugin's whole process group (SIGKILL) and reap
+                    // it so the kernel does not leave a zombie.  Killing the
+                    // group also closes the stdout pipe (forked children would
+                    // otherwise keep it open) and lets the reader thread exit.
+                    unsafe {
+                        libc::kill(-(child.id() as libc::pid_t), libc::SIGKILL);
+                    }
+                    let _ = child.wait();
+                    // Drain & join the reader so we do not leak the thread.
+                    if let Some(h) = stdout_handle {
+                        let _ = h.join();
+                    }
+                    return None;
+                }
+                thread::sleep(poll);
+            }
+            Err(e) => {
+                if let Some(h) = stdout_handle {
+                    let _ = h.join();
+                }
+                return Some(Err(e));
             }
         }
-        thread::sleep(poll);
-    }
+    };
 
-    let _ = wait_thread.join();
+    // Normal exit path: status known, drain the reader thread.
     let stdout_bytes = stdout_handle
         .and_then(|h| h.join().ok())
         .unwrap_or_default();
-
-    let status_result = result.lock().unwrap().take().unwrap();
-    Some(status_result.map(|s| (s, stdout_bytes)))
+    Some(exit_result.map(|s| (s, stdout_bytes)))
 }
 
 // ──────────────────────────────────────────────

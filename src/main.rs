@@ -26,7 +26,6 @@ use rustyline::validate::Validator;
 use rustyline::{CompletionType, Config as RlConfig, Editor, Helper};
 use sha2::{Digest, Sha256};
 use std::env;
-use std::fs::File;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
@@ -98,9 +97,110 @@ impl Helper for DpCompleter {}
 // Password authentication
 // ──────────────────────────────────────────────
 
+/// Stored hash format: `<salt_hex>$<iterations>$<digest_hex>`.
+/// Salt is 16 random bytes (32 hex chars); the digest is SHA-256 iterated
+/// `iterations` times over (salt || password), hex-encoded.  Iterating makes
+/// brute-force/dictionary attacks against a stolen config file far costlier.
+const HASH_ITERATIONS: u64 = 100_000;
+const SALT_BYTES: usize = 16;
+const HASH_ITER_CAP: u64 = 10_000_000;
+
+/// Compare two hex strings in constant time (no early exit on first mismatch).
+fn constant_time_eq(a: &str, b: &str) -> bool {
+    if a.len() != b.len() {
+        return false;
+    }
+    let mut diff: u8 = 0;
+    for (x, y) in a.bytes().zip(b.bytes()) {
+        diff |= x ^ y;
+    }
+    diff == 0
+}
+
+/// Iterated SHA-256: h0 = SHA-256(salt_hex || password), hi = SHA-256(hi-1).
+fn iterated_hash(password: &[u8], salt_hex: &str, iterations: u64) -> String {
+    let mut h = Sha256::new();
+    h.update(salt_hex.as_bytes());
+    h.update(password);
+    let mut digest = h.finalize();
+    for _ in 1..iterations {
+        let mut hasher = Sha256::new();
+        hasher.update(digest);
+        digest = hasher.finalize();
+    }
+    format!("{:x}", digest)
+}
+
+/// Verify `password` against the stored hash string from config.
+///
+/// - Empty string → always false (auth disabled; enforcing mode becomes
+///   un-exitable by design — set a hash before enabling enforcing).
+/// - `salt$iterations$digest` → salted, iterated verification.
+/// - Legacy bare SHA-256 (no `$`) → still verified, but a warning tells the
+///   admin to regenerate with `dpshell --hash-password`.
+/// - Anything else → false with a warning.
+fn verify_password(password: &str, stored: &str) -> bool {
+    if stored.is_empty() {
+        return false;
+    }
+    if let Some((head, digest)) = stored.rsplit_once('$') {
+        if let Some((salt, iters)) = head.split_once('$') {
+            if salt.len() == SALT_BYTES * 2 && digest.len() == 64 {
+                if let Ok(n) = iters.parse::<u64>() {
+                    let n = n.clamp(1, HASH_ITER_CAP);
+                    let expected = iterated_hash(password.as_bytes(), salt, n);
+                    return constant_time_eq(&expected, digest);
+                }
+            }
+        }
+        eprintln!(
+            "dpshell: warning: malformed password_hash in config \
+             (expected salt$iterations$digest); authentication disabled"
+        );
+        return false;
+    }
+    // Legacy unsalted SHA-256 — keep working, but tell the admin to regenerate.
+    let mut hasher = Sha256::new();
+    hasher.update(password.as_bytes());
+    let hash = format!("{:x}", hasher.finalize());
+    if constant_time_eq(&hash, stored) {
+        eprintln!(
+            "dpshell: warning: password_hash uses legacy unsalted SHA-256; \
+             regenerate with `dpshell --hash-password`"
+        );
+        true
+    } else {
+        false
+    }
+}
+
+/// Generate a new `salt$iterations$digest` hash and print it to stdout.
+/// Used via the hidden `--hash-password` flag.
+fn generate_password_hash() -> i32 {
+    use std::io::Read;
+    let mut salt_bytes = [0u8; SALT_BYTES];
+    let rand_ok = std::fs::File::open("/dev/urandom")
+        .and_then(|mut f| f.read_exact(&mut salt_bytes))
+        .is_ok();
+    if !rand_ok {
+        eprintln!("dpshell: cannot read /dev/urandom for salt generation");
+        return 1;
+    }
+    let salt_hex: String = salt_bytes.iter().map(|b| format!("{:02x}", b)).collect();
+    let password = match rpassword::prompt_password("Password: ") {
+        Ok(p) => p,
+        Err(e) => {
+            eprintln!("dpshell: failed to read password: {}", e);
+            return 1;
+        }
+    };
+    let digest = iterated_hash(password.as_bytes(), &salt_hex, HASH_ITERATIONS);
+    println!("{}${}${}", salt_hex, HASH_ITERATIONS, digest);
+    0
+}
+
 /// Prompt for the admin password (up to 3 attempts).
 /// Returns `true` if the correct password is entered, `false` after 3 failures.
-/// Uses SHA-256 to verify against the stored hash from config.
 fn authenticate(expected_hash: &str) -> bool {
     const MAX_ATTEMPTS: u32 = 3;
     for attempt in 0..MAX_ATTEMPTS {
@@ -112,10 +212,7 @@ fn authenticate(expected_hash: &str) -> bool {
                 return false;
             }
         };
-        let mut hasher = Sha256::new();
-        hasher.update(password.as_bytes());
-        let hash = format!("{:x}", hasher.finalize());
-        if hash == expected_hash {
+        if verify_password(&password, expected_hash) {
             return true;
         }
         let still_left = remaining - 1;
@@ -133,6 +230,13 @@ fn authenticate(expected_hash: &str) -> bool {
 // ──────────────────────────────────────────────
 
 fn main() -> Result<()> {
+    // Hidden flag: generate a password hash for [auth] password_hash and exit.
+    // Runs before any config/log/plugin initialisation so it needs no
+    // privileges beyond reading the terminal.
+    if std::env::args().any(|a| a == "--hash-password") {
+        std::process::exit(generate_password_hash());
+    }
+
     // ── 1. Load configuration ──────────────────────────────────────────────
     // ARCHITECTURE.md §4: config file at /etc/deeprotection/config.toml
     let config = config::load_config().unwrap_or_else(|e| {
@@ -152,6 +256,16 @@ fn main() -> Result<()> {
     });
 
     let mode = config.core.mode.clone();
+
+    // Fail fast on an unknown mode instead of silently misbehaving per command.
+    if !["disable", "permissive", "enforcing"].contains(&mode.as_str()) {
+        eprintln!(
+            "dpshell: invalid [core] mode '{}' in config; must be one of: disable, permissive, enforcing",
+            mode
+        );
+        std::process::exit(2);
+    }
+
     let protect_paths = config.paths.protect.clone();
     let allowlist = config.paths.allowlist.clone();
     let password_hash = config.auth.password_hash.clone();
@@ -202,13 +316,43 @@ fn main() -> Result<()> {
     }
 
     // ── 5. Command history in /tmp (ARCHITECTURE.md §3.7) ─────────────────
-    let rand_suffix: u32 = {
-        // Simple PRNG seed from process ID + time-ish
-        let pid = std::process::id();
-        pid ^ 0xDEAD_BEEF
+    // Hardened: unpredictable 64-bit random suffix, O_NOFOLLOW (a pre-planted
+    // symlink — the classic /tmp attack — fails closed), 0600 permissions.
+    // On any failure, history stays in-memory only; the shell must not crash
+    // or truncate arbitrary files because /tmp is hostile.
+    let hist_path: Option<PathBuf> = {
+        use std::io::Read;
+        use std::os::unix::fs::OpenOptionsExt;
+
+        let mut rand_bytes = [0u8; 8];
+        let rand_ok = std::fs::File::open("/dev/urandom")
+            .and_then(|mut f| f.read_exact(&mut rand_bytes))
+            .is_ok();
+        let suffix = if rand_ok {
+            u64::from_le_bytes(rand_bytes)
+        } else {
+            // Last-resort fallback (no /dev/urandom available).
+            (std::process::id() as u64) ^ 0xDEAD_BEEF
+        };
+        let path = PathBuf::from(format!("/tmp/dpshell_history.{:016X}", suffix));
+        match std::fs::OpenOptions::new()
+            .write(true)
+            .create(true)
+            .mode(0o600)
+            .custom_flags(libc::O_NOFOLLOW)
+            .open(&path)
+        {
+            Ok(_) => Some(path),
+            Err(e) => {
+                eprintln!(
+                    "dpshell: warning: cannot create history file {}: {} (history will be in-memory only)",
+                    path.display(),
+                    e
+                );
+                None
+            }
+        }
     };
-    let hist_path = PathBuf::from(format!("/tmp/dpshell_history.{:06X}", rand_suffix));
-    let _ = File::create(&hist_path);
 
     // ── 6. Startup animation ───────────────────────────────────────────────
     // ARCHITECTURE.md §3.7; Refactored_Plan.md §5
@@ -243,7 +387,9 @@ fn main() -> Result<()> {
         .build();
     let mut rl: Editor<DpCompleter, _> = Editor::with_config(rl_config)?;
     rl.set_helper(Some(DpCompleter::new()));
-    let _ = rl.load_history(&hist_path);
+    if let Some(p) = &hist_path {
+        let _ = rl.load_history(p);
+    }
 
     let prompt = utils::get_prompt(dpshell_level);
 
@@ -320,7 +466,9 @@ fn main() -> Result<()> {
 
         // Save to history
         let _ = rl.add_history_entry(cmd);
-        let _ = rl.save_history(&hist_path);
+        if let Some(p) = &hist_path {
+            let _ = rl.save_history(p);
+        }
 
         // Context for logging (re-fetched each command for accuracy)
         let user = utils::get_current_user();
@@ -328,18 +476,30 @@ fn main() -> Result<()> {
         let pid = std::process::id();
         let cwd_str = cwd.to_string_lossy().to_string();
 
-        // Exit command: require auth in enforcing mode
-        if cmd == "exit" {
+        // Built-ins must be handled in-process (directory changes need to persist).
+        let args: Vec<String> = cmd.split_whitespace().map(|s| s.to_string()).collect();
+
+        // Exit command (also `exit 0`, `exit 5`, ...): require auth in enforcing mode.
+        if args[0] == "exit" {
             if try_exit(&logger, &user, &cwd_str, pid) {
                 break;
             }
             continue;
         }
 
-        // Built-in cd (must be handled in-process for directory changes to persist)
-        let args: Vec<String> = cmd.split_whitespace().map(|s| s.to_string()).collect();
+        // Built-in cd — logged like any other command.
         if args[0] == "cd" {
-            let _ = execute_cd(&args[1..]);
+            let msg = match execute_cd(&args[1..]) {
+                Ok(_) => "cd executed".to_string(),
+                Err(e) => format!("cd failed: {}", e),
+            };
+            let entry = LogEntry::new("INFO", &user, &mode, cmd, &cwd_str, pid, &msg);
+            if let Err(e) = logger.write_entry(&entry) {
+                eprintln!("dpshell: log write failed: {}", e);
+            }
+            if let Err(e) = logger.flush() {
+                eprintln!("dpshell: log flush failed: {}", e);
+            }
             continue;
         }
 
@@ -446,12 +606,9 @@ fn main() -> Result<()> {
                 if let Err(e) = logger.flush() { eprintln!("dpshell: log flush failed: {}", e); }
             }
 
-            // Unknown mode: warn and fall back to permissive behaviour (no plugins)
-            other => {
-                eprintln!("dpshell: unknown mode '{}', treating as permissive", other);
-                if let Some(to_execute) = apply_rules(cmd, &compiled_rules) {
-                    execute_command(&to_execute);
-                }
+            // Defensive: mode was validated at startup; this is unreachable.
+            _ => {
+                eprintln!("dpshell: internal error: unhandled mode '{}'", mode);
             }
         }
         println!(); // Blank line between commands for readability
@@ -463,7 +620,9 @@ fn main() -> Result<()> {
     //     chrono::Local::now().format("%Y-%m-%d %H:%M:%S")
     // );
 
-    let _ = std::fs::remove_file(&hist_path);
+    if let Some(p) = &hist_path {
+        let _ = std::fs::remove_file(p);
+    }
 
     // Decrement nesting level
     let new_level = dpshell_level.saturating_sub(1);
