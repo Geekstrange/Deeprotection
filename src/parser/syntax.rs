@@ -982,10 +982,10 @@ impl Parser {
         match self.peek() {
             Some(SToken::Word(w)) if w == expected => {
                 self.advance();
-                // Consume trailing separator.
-                if matches!(self.peek(), Some(SToken::Semi | SToken::Newline)) {
-                    self.advance();
-                }
+                // Note: do NOT consume a trailing separator here.  For
+                // closing keywords (`fi`, `done`, `esac`) the enclosing
+                // sequence owns the separator; consuming it would glue the
+                // next statement to the compound command (`... fi; echo x`).
                 Ok(())
             }
             other => Err(ParseError::Lex(format!(

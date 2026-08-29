@@ -1,10 +1,15 @@
 # Deeprotection
 
+> [!CAUTION]
+> **🚨 This is the CANARY release – bleeding-edge, experimental, and potentially unstable.**
+> It may contain bugs, incomplete features, and breaking changes. **Not recommended for production use.**
+> For the stable, production-ready version, please switch to the `main` branch or use the latest release.
+
 Deeprotection is a high-performance, fully-featured shell environment (`dpshell`) written in Rust. It provides a hand-written recursive-descent parser, a direct `fork/execve` executor (no `/bin/sh` wrapper), POSIX-compatible control structures, 50+ built-in commands, job control, and rich interactive features. On top of this shell core, it layers rule-based command matching, plugin extensibility, path protection with symlink-aware auditing, JSONL audit logging, and SHA-256 password authentication. It offers three operation strategies: Enforcing, Permissive, and Disable modes.
 
 <p align="center">
   <a href="https://github.com/Geekstrange/Deeprotection">
-    <img src="https://github.com/Geekstrange/Deeprotection/blob/main/images/logo.svg" alt="logo" width="120" height="120">
+    <img src="https://github.com/Geekstrange/Deeprotection/blob/canary/images/logo.svg" alt="canary-logo" width="120" height="120">
   </a>
   <h5 align="center">: ) Hello, thank you for using!⭐</h5>
   <p align="center">
@@ -125,7 +130,7 @@ Set `bash_compat = true` in the `[core]` section to enable:
 
 ```shell
 # Clone the repository
-git clone https://github.com/Geekstrange/Deeprotection.git
+git clone -b canary https://github.com/Geekstrange/Deeprotection.git
 cd Deeprotection
 
 # Build release binary
