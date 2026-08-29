@@ -1,4 +1,4 @@
-# Deeprotection
+# Deeprotection (Canary)
 
 > [!CAUTION]
 > **🚨 This is the CANARY release – bleeding-edge, experimental, and potentially unstable.**
