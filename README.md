@@ -1,10 +1,15 @@
-# Deeprotection
+# Deeprotection (LTS)
+
+> [!IMPORTANT]
+> **🔒 This is the LTS (Long-Term Support) release** – stable, production‑ready, and maintained with backported security fixes.
+> It is **recommended for enterprise environments** that require reliability over the latest features.
+> For the active development branch with cutting‑edge changes, please use [`main`](https://github.com/Geekstrange/Deeprotection/tree/main).
 
 Deeprotection is a high-performance security tool written in Rust. It acts as a secure shell wrapper (`dpshell`) that provides command interception, rule-based matching, plugin extensibility, path protection, audit logging, and password authentication. It offers three operation strategies: Enforcing, Permissive, and Disable modes.
 
 <p align="center">
   <a href="https://github.com/Geekstrange/Deeprotection">
-    <img src="https://github.com/Geekstrange/Deeprotection/blob/main/images/logo.svg" alt="logo" width="120" height="120">
+    <img src="https://github.com/Geekstrange/Deeprotection/blob/lts/images/logo.svg" alt="lts-logo" width="120" height="120">
   </a>
   <h5 align="center">: ) Hello, thank you for using!⭐</h5>
   <p align="center">
