@@ -1,0 +1,12 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 🔒 Report a security vulnerability (private)
+    url: https://github.com/Geekstrange/Deeprotection/security/advisories/new
+    about: Do NOT open a public issue for security vulnerabilities. Report privately — see SECURITY.md.
+  - name: 📖 Documentation & README
+    url: https://github.com/Geekstrange/Deeprotection/blob/main/README.md
+    about: Please read the documentation before filing an issue.
+  - name: 🤝 Contributing guide
+    url: https://github.com/Geekstrange/Deeprotection/blob/main/CONTRIBUTING.md
+    about: How to build, test, and submit pull requests (Conventional Commits + DCO).
+

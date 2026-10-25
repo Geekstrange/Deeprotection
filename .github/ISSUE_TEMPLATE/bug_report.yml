@@ -1,0 +1,170 @@
+name: 🐛 Bug Report
+description: Report a reproducible bug or unexpected behavior in Deeprotection (Main / dpshell).
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to file a bug report! 🐛
+
+        **Before you submit:**
+        - 🔎 Search [existing issues](https://github.com/Geekstrange/Deeprotection/issues) to avoid duplicates.
+        - 🌱 This tracker is for the **main** (active development) edition, version **2.0.0**. Please confirm the issue still reproduces on the latest `main`.
+        - 🔒 **Do NOT report security vulnerabilities here.** See [SECURITY.md](https://github.com/Geekstrange/Deeprotection/blob/main/SECURITY.md) and use private vulnerability reporting instead.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug summary
+      description: A clear and concise description of what the bug is.
+      placeholder: 'e.g. "dpshell blocks `ls` on a protected path even in permissive mode"'
+    validations:
+      required: true
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: Affected component
+      description: Which part of the shell is involved?
+      options:
+        - Parser / expansion (variables, glob, heredoc, arithmetic)
+        - Executor / pipelines / redirection
+        - Built-in commands
+        - Security rules engine
+        - Path protection
+        - Plugin system
+        - Password authentication
+        - Interactive editor (highlighting / completion / history / hints)
+        - Configuration (config.toml)
+        - Audit logging
+        - Job control (fg/bg/jobs)
+        - Documentation
+        - Other / not sure
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Deeprotection version
+      description: Exact version / commit you are running.
+      placeholder: "2.0.0 (main, commit abc1234)"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      description: Deeprotection is Unix/Linux-only. Windows is not supported.
+      options:
+        - Linux (Ubuntu / Debian)
+        - Linux (Fedora / RHEL / CentOS)
+        - Linux (Arch)
+        - Linux (Alpine)
+        - Linux (other)
+        - macOS
+        - Other Unix
+    validations:
+      required: true
+
+  - type: input
+    id: os_version
+    attributes:
+      label: OS version / kernel
+      placeholder: "Ubuntu 24.04, kernel 6.8"
+    validations:
+      required: false
+
+  - type: dropdown
+    id: mode
+    attributes:
+      label: Protection mode
+      description: The `[core] mode` in effect when the bug occurred.
+      options:
+        - enforcing
+        - permissive
+        - disable
+        - Not sure
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Exact commands and inputs. A minimal reproducible case is hugely appreciated.
+      placeholder: |
+        1. Build with `cargo build --release`
+        2. Run `./target/release/dpshell`
+        3. Execute `...`
+        4. Observe `...`
+      render: shell
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      placeholder: What did you expect to happen?
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: What actually happened? Include the exact error output.
+      placeholder: Paste the exact output / exit code.
+    validations:
+      required: true
+
+  - type: textarea
+    id: config
+    attributes:
+      label: Relevant configuration
+      description: Relevant `config.toml` sections (`[core]`, `[[rules]]`, `[paths]`, `[features]`).
+      placeholder: |
+        [core]
+        mode = "enforcing"
+
+        [[rules]]
+        name = "block_rm_rf"
+        pattern = "rm -rf"
+        action = { block = true }
+        enabled = true
+      render: toml
+    validations:
+      required: false
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs / error output
+      description: Relevant lines from `/var/log/audit.log` (JSONL) or stderr. Redact sensitive paths and the `password_hash`.
+      render: shell
+    validations:
+      required: false
+
+  - type: input
+    id: rust_version
+    attributes:
+      label: Rust toolchain (only if built from source)
+      placeholder: "rustc 1.99.0"
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: confirmations
+    attributes:
+      label: Confirmations
+      options:
+        - label: I have searched existing issues and this is not a duplicate.
+          required: true
+        - label: I confirm this is NOT a security vulnerability (those must be reported privately per SECURITY.md).
+          required: true
+        - label: I agree to follow this project's Code of Conduct.
+          required: true
+

@@ -1,0 +1,77 @@
+name: ✨ Feature Request
+description: Suggest an idea or enhancement for Deeprotection (Main).
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping improve Deeprotection! ✨
+
+        - 🔎 Search [existing issues](https://github.com/Geekstrange/Deeprotection/issues) first.
+        - New features generally land on `canary` first, then reach `main` and eventually `lts`.
+        - 🔒 Security issues are **not** feature requests — report them privately per [SECURITY.md](https://github.com/Geekstrange/Deeprotection/blob/main/SECURITY.md).
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Is your feature request related to a problem?
+      description: A clear description of the problem or limitation you are facing.
+      placeholder: "I'm always frustrated when ..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Describe the solution you'd like
+      description: What you want to happen, including any proposed syntax, config keys, or CLI flags.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives you've considered
+      description: Other approaches or existing workarounds.
+    validations:
+      required: false
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Parser / expansion
+        - Executor / pipelines
+        - Built-in commands
+        - Security rules engine
+        - Path protection
+        - Plugin system
+        - Interactive editor
+        - Configuration
+        - Audit logging
+        - Job control
+        - Documentation
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Mockups, references, or upstream shells (bash / brush / nushell) that already do this.
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: confirmations
+    attributes:
+      label: Confirmations
+      options:
+        - label: I have searched existing issues and this is not a duplicate.
+          required: true
+        - label: I agree to follow this project's Code of Conduct.
+          required: true
+
